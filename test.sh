@@ -35,4 +35,8 @@ assert 7 "1+2*3"
 assert 26 "2*3+4*5"
 assert 2 "1+2+10-(2+3*3)"
 
+# step6
+assert 10 "-10+20"
+assert 7 "-(5+8)+20"
+
 echo OK
