@@ -29,4 +29,10 @@ assert 42 42
 assert 21 "5+20-4"
 assert 51 "5 - 3 + 99 - 50"
 
+# step5
+assert 98 "200 - (3 + 99)"
+assert 7 "1+2*3"
+assert 26 "2*3+4*5"
+assert 2 "1+2+10-(2+3*3)"
+
 echo OK
