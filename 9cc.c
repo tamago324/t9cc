@@ -105,7 +105,6 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // トークンを生成して、cur につなげる
-// TODO: len をもらうのかどうか？ str から算出できるものなの？
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
@@ -114,6 +113,10 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   cur->next = tok;
   return tok;
 }
+
+// 指定の文字で始まるか？
+//   memcmp の結果は同じなら 0 を返す
+bool startswith(char *a, char *b) { return memcmp(a, b, strlen(b)) == 0; }
 
 // 入力文字列p をトークナイズして、それを返す
 Token *tokenize() {
@@ -132,27 +135,26 @@ Token *tokenize() {
     }
 
     // 2桁の記号の処理
-    //   memcmp の結果は同じなら 0 を返す
-    if (memcmp(p, "==", 2) == 0 || memcmp(p, "!=", 2) == 0 ||
-        memcmp(p, ">=", 2) == 0 || memcmp(p, "<=", 2) == 0) {
+    if (startswith(p, "==") || startswith(p, "!=") || startswith(p, ">=") ||
+        startswith(p, "<=")) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
     }
 
     // 1桁の記号の処理
-    if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
-        *p == ')' || *p == '>' || *p == '<') {
+    if (strchr("+-*/()><", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
 
     // 数字の処理
     if (isdigit(*p)) {
-      // 数値は別に比較しないため、0 を渡しておく
-      // TODO: 正しく計算する
       cur = new_token(TK_NUM, cur, p, 0);
+      char *q = p;
       cur->val = strtol(p, &p, 10);
+      // 長さを計算してセットしなおす
+      cur->len = q - p;
       continue;
     }
     error_at(p, "トークナイズできません");
