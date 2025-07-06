@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // トークンの種類
 typedef enum {
@@ -18,6 +19,7 @@ struct Token {
   Token *next;    // 次の入力トークン
   int val;        // kind が TK_NUM の場合、その数値
   char *str;      // トークン文字列
+  int len;        // トークンの長さ (== や >= などで使う)
 };
 
 // 抽象構文木のノードの種類
@@ -26,6 +28,12 @@ typedef enum {
   ND_SUB, // -
   ND_MUL, // *
   ND_DIV, // /
+  ND_EQ,  // ==
+  ND_NE,  // !=
+  ND_LT,  // < (Less Than)
+  ND_LE,  // <= (Less than or Equal)
+  ND_GT,  // > (Greater Than)
+  ND_GE,  // > (Greater than or Equal)
   ND_NUM, // 整数
 } NodeKind;
 
@@ -61,8 +69,9 @@ void error_at(char *loc, char *fmt, ...) {
 // 現在のトークンが期待している記号のときは、トークンを消費して
 // true を返す。
 // それ以外の場合は false を返す。
-bool consume(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op) {
+bool consume(char *op) {
+  if (token->kind != TK_RESERVED || strlen(op) != token->len ||
+      memcmp(token->str, op, token->len)) {
     return false;
   }
 
@@ -72,8 +81,9 @@ bool consume(char op) {
 
 // 現在のトークンが期待している記号のときは、トークンを消費する。
 // それ以外の場合はエラーを報告する。
-void expect(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op) {
+void expect(char *op) {
+  if (token->kind != TK_RESERVED || strlen(op) != token->len ||
+      memcmp(token->str, op, token->len)) {
     error_at(token->str, "'%c'ではありません", op);
   }
 
@@ -95,10 +105,12 @@ int expect_number() {
 bool at_eof() { return token->kind == TK_EOF; }
 
 // トークンを生成して、cur につなげる
-Token *new_token(TokenKind kind, Token *cur, char *str) {
+// TODO: len をもらうのかどうか？ str から算出できるものなの？
+Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
   tok->str = str;
+  tok->len = len;
   cur->next = tok;
   return tok;
 }
@@ -119,16 +131,27 @@ Token *tokenize() {
       continue;
     }
 
-    // 記号の処理
+    // 2桁の記号の処理
+    //   memcmp の結果は同じなら 0 を返す
+    if (memcmp(p, "==", 2) == 0 || memcmp(p, "!=", 2) == 0 ||
+        memcmp(p, ">=", 2) == 0 || memcmp(p, "<=", 2) == 0) {
+      cur = new_token(TK_RESERVED, cur, p, 2);
+      p += 2;
+      continue;
+    }
+
+    // 1桁の記号の処理
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' ||
-        *p == ')') {
-      cur = new_token(TK_RESERVED, cur, p++);
+        *p == ')' || *p == '>' || *p == '<') {
+      cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
 
     // 数字の処理
     if (isdigit(*p)) {
-      cur = new_token(TK_NUM, cur, p);
+      // 数値は別に比較しないため、0 を渡しておく
+      // TODO: 正しく計算する
+      cur = new_token(TK_NUM, cur, p, 0);
       cur->val = strtol(p, &p, 10);
       continue;
     }
@@ -136,7 +159,7 @@ Token *tokenize() {
   }
 
   // 最後は、EOFにしておく
-  new_token(TK_EOF, cur, p);
+  new_token(TK_EOF, cur, p, 0);
   return head.next;
 }
 
@@ -159,36 +182,68 @@ Node *new_node_num(int val) {
 
 // 入れ子になるため、先に定義しておく
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
+Node *mul();
+Node *unary();
+Node *primary();
 
-Node *primary() {
-  if (consume('(')) {
-    Node *node = expr();
-    expect(')');
-    return node;
+Node *expr() { return equality(); }
+
+Node *equality() {
+  Node *node = relational();
+
+  for (;;) {
+    if (consume("==")) {
+      node = new_node(ND_EQ, node, relational());
+    } else if (consume("!=")) {
+      node = new_node(ND_NE, node, relational());
+    } else {
+      return node;
+    }
   }
-
-  return new_node_num(expect_number());
 }
 
-Node *unary() {
-  if (consume('+')) {
-    return primary();
-  }
-  if (consume('-')) {
-    return new_node(ND_SUB, new_node_num(0), primary());
-  }
+Node *relational() {
+  Node *node = add();
 
-  // 通常の数値の場合は、通常通りに処理する
-  return primary();
+  for (;;) {
+    if (consume("<")) {
+      node = new_node(ND_LT, node, add());
+    } else if (consume("<=")) {
+      node = new_node(ND_LE, node, add());
+    } else if (consume(">")) {
+      node = new_node(ND_GT, node, add());
+    } else if (consume(">=")) {
+      node = new_node(ND_GE, node, add());
+    } else {
+      return node;
+    }
+  }
+}
+
+Node *add() {
+  Node *node = mul();
+
+  for (;;) {
+    if (consume("+")) {
+      node = new_node(ND_ADD, node, mul());
+    } else if (consume("-")) {
+      node = new_node(ND_SUB, node, mul());
+    } else {
+      return node;
+    }
+  }
 }
 
 Node *mul() {
   Node *node = unary();
 
   for (;;) {
-    if (consume('*')) {
+    if (consume("*")) {
       node = new_node(ND_MUL, node, unary());
-    } else if (consume('/')) {
+    } else if (consume("/")) {
       node = new_node(ND_DIV, node, unary());
     } else {
       return node;
@@ -196,18 +251,26 @@ Node *mul() {
   }
 }
 
-Node *expr() {
-  Node *node = mul();
-
-  for (;;) {
-    if (consume('+')) {
-      node = new_node(ND_ADD, node, mul());
-    } else if (consume('-')) {
-      node = new_node(ND_SUB, node, mul());
-    } else {
-      return node;
-    }
+Node *unary() {
+  if (consume("+")) {
+    return primary();
   }
+  if (consume("-")) {
+    return new_node(ND_SUB, new_node_num(0), primary());
+  }
+
+  // 通常の数値の場合は、通常通りに処理する
+  return primary();
+}
+
+Node *primary() {
+  if (consume("(")) {
+    Node *node = expr();
+    expect(")");
+    return node;
+  }
+
+  return new_node_num(expect_number());
 }
 
 void gen(Node *node) {
@@ -242,6 +305,36 @@ void gen(Node *node) {
   case ND_DIV:
     printf("  cqo\n");
     printf("  idiv rdi\n");
+    break;
+  case ND_EQ:
+    printf("  cmp rax, rdi\n");
+    printf("  sete al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_NE:
+    printf("  cmp rax, rdi\n");
+    printf("  setne al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_LT:
+    printf("  cmp rax, rdi\n");
+    printf("  setl al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_LE:
+    printf("  cmp rax, rdi\n");
+    printf("  setle al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_GT:
+    printf("  cmp rdi, rax\n");
+    printf("  setl al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_GE:
+    printf("  cmp rdi, rax\n");
+    printf("  setle al\n");
+    printf("  movzb rax, al\n");
     break;
   case ND_NUM:
     // ここには来ない想定
