@@ -1,54 +1,10 @@
+#include "9cc.h"
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// トークンの種類
-typedef enum {
-  TK_RESERVED, // 記号
-  TK_NUM,      // 整数トークン
-  TK_EOF,      // 入力の終わりを表すトークン
-} TokenKind;
-
-typedef struct Token Token;
-
-struct Token {
-  TokenKind kind; // トークンの型
-  Token *next;    // 次の入力トークン
-  int val;        // kind が TK_NUM の場合、その数値
-  char *str;      // トークン文字列
-  int len;        // トークンの長さ (== や >= などで使う)
-};
-
-// 抽象構文木のノードの種類
-typedef enum {
-  ND_ADD, // +
-  ND_SUB, // -
-  ND_MUL, // *
-  ND_DIV, // /
-  ND_EQ,  // ==
-  ND_NE,  // !=
-  ND_LT,  // < (Less Than)
-  ND_LE,  // <= (Less than or Equal)
-  ND_NUM, // 整数
-} NodeKind;
-
-typedef struct Node Node;
-
-struct Node {
-  NodeKind kind; // ノードの型
-  Node *lhs;     // 左側の木
-  Node *rhs;     // 右側の木
-  int val;       // kind が ND_NUM の場合、数値が入る
-};
-
-// 現在着目しているトークン
-Token *token;
-
-// 入力プログラム
-char *user_input;
 
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
@@ -100,8 +56,6 @@ int expect_number() {
   return val;
 }
 
-bool at_eof() { return token->kind == TK_EOF; }
-
 // トークンを生成して、cur につなげる
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
@@ -110,6 +64,23 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   tok->len = len;
   cur->next = tok;
   return tok;
+}
+
+// ノード作成
+Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = kind;
+  node->lhs = lhs;
+  node->rhs = rhs;
+  return node;
+}
+
+// 数値のノード作成
+Node *new_node_num(int val) {
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_NUM;
+  node->val = val;
+  return node;
 }
 
 // 指定の文字で始まるか？
@@ -161,23 +132,6 @@ Token *tokenize() {
   // 最後は、EOFにしておく
   new_token(TK_EOF, cur, p, 0);
   return head.next;
-}
-
-// ノード作成
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = kind;
-  node->lhs = lhs;
-  node->rhs = rhs;
-  return node;
-}
-
-// 数値のノード作成
-Node *new_node_num(int val) {
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_NUM;
-  node->val = val;
-  return node;
 }
 
 // 入れ子になるため、先に定義しておく
@@ -273,92 +227,4 @@ Node *primary() {
   }
 
   return new_node_num(expect_number());
-}
-
-void gen(Node *node) {
-  if (node->kind == ND_NUM) {
-    // 終端文字だから、そのまま出力して終わり
-    printf("  push %d\n", node->val);
-    return;
-  }
-
-  // 帰りがけで巡回する
-  // left -> right を出力する
-  gen(node->lhs);
-  gen(node->rhs);
-
-  // pop して、rdi と rax に格納する
-  // (除算の場合、順序が重要になるため、rdi, rax の順にしておく)
-  printf("  pop rdi\n");
-  printf("  pop rax\n");
-
-  // 帰りがけの根の部分を処理
-  switch (node->kind) {
-  case ND_ADD:
-    printf("  add rax, rdi\n");
-    break;
-  case ND_SUB:
-    printf("  sub rax, rdi\n");
-    break;
-  case ND_MUL:
-    // 符号付の乗算
-    printf("  imul rax, rdi\n");
-    break;
-  case ND_DIV:
-    printf("  cqo\n");
-    printf("  idiv rdi\n");
-    break;
-  case ND_EQ:
-    printf("  cmp rax, rdi\n");
-    printf("  sete al\n");
-    printf("  movzb rax, al\n");
-    break;
-  case ND_NE:
-    printf("  cmp rax, rdi\n");
-    printf("  setne al\n");
-    printf("  movzb rax, al\n");
-    break;
-  case ND_LT:
-    printf("  cmp rax, rdi\n");
-    printf("  setl al\n");
-    printf("  movzb rax, al\n");
-    break;
-  case ND_LE:
-    printf("  cmp rax, rdi\n");
-    printf("  setle al\n");
-    printf("  movzb rax, al\n");
-    break;
-  case ND_NUM:
-    // ここには来ない想定
-    break;
-  }
-
-  // 計算結果を push する必要がある (スタックに積みなおす)
-  printf("  push rax\n");
-}
-
-int main(int argc, char **argv) {
-  if (argc != 2) {
-    fprintf(stderr, "引数の個数が正しくありません\n");
-    return 1;
-  }
-
-  // トークナイズして、ASTにパースする
-  // プログラム全体を保持しておく
-  user_input = argv[1];
-  token = tokenize();
-  Node *node = expr();
-
-  // アセンブリの前半部分を出力
-  printf(".intel_syntax noprefix\n");
-  printf(".global main\n");
-  printf("main:\n");
-
-  // ASTを下りながらコードを生成
-  gen(node);
-
-  // スタックの一番上に計算結果があるはずだから、取り出して、関数の戻り値にする
-  printf("  pop rax\n");
-  printf("  ret\n");
-  return 0;
 }
