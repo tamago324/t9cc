@@ -6,6 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+// 現在着目しているトークン (定義)
+Token *token;
+
+// 複数文に対応するためのノードを格納する (定義)
+Node *code[100];
+
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
   va_list ap;
@@ -33,6 +39,17 @@ bool consume(char *op) {
   return true;
 }
 
+// 識別子かどうかチェックし、もしそうなら読み進める
+Token *consume_ident() {
+  if (token->kind != TK_IDENT) {
+    return false;
+  }
+
+  Token *tok = token;
+  token = token->next;
+  return tok;
+}
+
 // 現在のトークンが期待している記号のときは、トークンを消費する。
 // それ以外の場合はエラーを報告する。
 void expect(char *op) {
@@ -55,6 +72,8 @@ int expect_number() {
   token = token->next;
   return val;
 }
+
+bool at_eof() { return token->kind == TK_EOF; }
 
 // トークンを生成して、cur につなげる
 Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
@@ -88,7 +107,7 @@ Node *new_node_num(int val) {
 bool startswith(char *a, char *b) { return memcmp(a, b, strlen(b)) == 0; }
 
 // 入力文字列p をトークナイズして、それを返す
-Token *tokenize() {
+void tokenize() {
   char *p = user_input;
 
   Token head;
@@ -96,7 +115,6 @@ Token *tokenize() {
   Token *cur = &head;
 
   while (*p) {
-
     // 空白文字はスキップ
     if (isspace(*p)) {
       p++;
@@ -112,7 +130,7 @@ Token *tokenize() {
     }
 
     // 1桁の記号の処理
-    if (strchr("+-*/()><", *p)) {
+    if (strchr("+-*/()><;", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
@@ -126,16 +144,26 @@ Token *tokenize() {
       cur->len = q - p;
       continue;
     }
+
+    // 変数
+    if ('a' <= *p && *p <= 'z') {
+      cur = new_token(TK_IDENT, cur, p++, 1);
+      continue;
+    }
+
     error_at(p, "トークナイズできません");
   }
 
   // 最後は、EOFにしておく
   new_token(TK_EOF, cur, p, 0);
-  return head.next;
+  // 次に進めておく。 (最初はダミーのため。)
+  token = head.next;
 }
 
 // 入れ子になるため、先に定義しておく
+Node *stmt();
 Node *expr();
+Node *assign();
 Node *equality();
 Node *relational();
 Node *add();
@@ -143,8 +171,41 @@ Node *mul();
 Node *unary();
 Node *primary();
 
-Node *expr() { return equality(); }
+// program = stmt*
+void program() {
+  int i = 0;
 
+  while (!at_eof()) {
+    code[i] = stmt();
+    i++;
+  }
+
+  // 最後は NULL を入れておく
+  code[i] = NULL;
+}
+
+// stmt = expr ";"
+Node *stmt() {
+  Node *node = expr();
+  expect(";");
+  return node;
+}
+
+// expr = assign
+Node *expr() { return assign(); }
+
+// assign = equality ("=" assign)?
+Node *assign() {
+  Node *node = equality();
+
+  if (consume("=")) {
+    node = new_node(ND_ASSIGN, node, assign());
+  }
+
+  return node;
+}
+
+// equality = relational ("==" relational | "!=" relational)*
 Node *equality() {
   Node *node = relational();
 
@@ -159,6 +220,7 @@ Node *equality() {
   }
 }
 
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 Node *relational() {
   Node *node = add();
 
@@ -179,6 +241,7 @@ Node *relational() {
   }
 }
 
+// add = mul ("+" mul | "-" mul)*
 Node *add() {
   Node *node = mul();
 
@@ -193,6 +256,7 @@ Node *add() {
   }
 }
 
+// mul = unary ("*" unary | "/" unary)*
 Node *mul() {
   Node *node = unary();
 
@@ -207,6 +271,7 @@ Node *mul() {
   }
 }
 
+// unary = ("+" | "-")? primary
 Node *unary() {
   if (consume("+")) {
     return primary();
@@ -219,10 +284,22 @@ Node *unary() {
   return primary();
 }
 
+// primary = num | ident | "(" expr ")"
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
     expect(")");
+    return node;
+  }
+
+  Token *tok = consume_ident();
+  if (tok) {
+    // 識別子なら、LVAR (左辺値) として処理する
+    Node *node = calloc(1, sizeof(Node));
+    node->kind = ND_LVAR;
+    // ベースポインタからのオフセット
+    // a~zまでの識別子が埋まっている前提のため、8ビットごとに計算できる
+    node->offset = (tok->str[0] - 'a' + 1) * 8;
     return node;
   }
 

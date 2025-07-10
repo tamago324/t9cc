@@ -3,9 +3,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// 現在着目しているトークン (定義)
-Token *token;
-
 // 入力プログラム (定義)
 char *user_input;
 
@@ -16,21 +13,35 @@ int main(int argc, char **argv) {
   }
 
   // トークナイズして、ASTにパースする
-  // プログラム全体を保持しておく
+  // トークないずの結果は code に保存されるため、ここでは保持しない
   user_input = argv[1];
-  token = tokenize();
-  Node *node = expr();
+  tokenize();
+  program();
 
   // アセンブリの前半部分を出力
   printf(".intel_syntax noprefix\n");
   printf(".global main\n");
   printf("main:\n");
 
-  // ASTを下りながらコードを生成
-  gen(node);
+  // プロローグ
+  printf("  push rbp\n");
+  printf("  mov rbp, rsp\n");
+  printf("  sub rsp, 208\n"); // 変数26個分の領域を確保する
 
-  // スタックの一番上に計算結果があるはずだから、取り出して、関数の戻り値にする
-  printf("  pop rax\n");
+  // 先頭の式から順にコード生成
+  for (int i = 0; code[i]; i++) {
+    gen(code[i]);
+
+    // 式の評価結果としてスタックに1つの値が残っているはずなので、
+    // スタックが溢れないように pop しておく
+    printf("  pop rax\n");
+  }
+
+  // エピローグ
+  printf("  mov rsp, rbp\n");
+  printf("  pop rbp\n");
   printf("  ret\n");
+
+  // 最後の式の結果が RAX に残っているため、それが返り値になる
   return 0;
 }
