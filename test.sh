@@ -61,6 +61,9 @@ assert 0 '1>=2;'
 
 # step9
 assert 3 '1;2;3;'
+assert 3 'a=1;b=2;a+b;'
+
+# step10
 
 echo OK
 

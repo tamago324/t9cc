@@ -19,7 +19,7 @@ void gen_lval(Node *node) {
     error("代入の左辺値が変数ではありません。");
   }
 
-  printf("  mov, rax, rbp\n");
+  printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n", node->offset);
   printf("  push rax\n");
 }
@@ -47,7 +47,7 @@ void gen(Node *node) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
     printf("  mov [rax], rdi\n");
-    printf("  push rdi"); // 右辺の値を push しておくのはなんでだろうか？
+    printf("  push rdi\n"); // 右辺の値を push しておくのはなんでだろうか？
     return;
   case ND_ADD:
   case ND_SUB:
@@ -89,22 +89,22 @@ void gen(Node *node) {
   case ND_EQ:
     printf("  cmp rax, rdi\n");
     printf("  sete al\n");
-    printf("  movzb rax, al\n");
+    printf("  movzx rax, al\n");
     break;
   case ND_NE:
     printf("  cmp rax, rdi\n");
     printf("  setne al\n");
-    printf("  movzb rax, al\n");
+    printf("  movzx rax, al\n");
     break;
   case ND_LT:
     printf("  cmp rax, rdi\n");
     printf("  setl al\n");
-    printf("  movzb rax, al\n");
+    printf("  movzx rax, al\n");
     break;
   case ND_LE:
     printf("  cmp rax, rdi\n");
     printf("  setle al\n");
-    printf("  movzb rax, al\n");
+    printf("  movzx rax, al\n");
     break;
   case ND_ASSIGN:
   case ND_LVAR:
