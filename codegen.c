@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int labelSeq = 0;
+
 // エラーを報告するための関数
 // printfと同じ引数をとる
 void error(char *fmt, ...) {
@@ -36,6 +38,18 @@ void gen(Node *node) {
   }
 
   switch (node->kind) {
+
+  case ND_IF:
+    labelSeq++;
+    // 条件式を評価
+    gen(node->lhs);
+    printf("  pop rax\n"); // スタックの先頭に、条件式の結果が入っている
+    // jump equals: false(0)の場合にジャンプする
+    printf("  cmp rax, 0\n");
+    printf("  je Lend%d\n", labelSeq);
+    gen(node->rhs);
+    printf("Lend%d:\n", labelSeq);
+
   case ND_NUM:
     // 終端文字だから、そのまま出力して終わり
     printf("  push %d\n", node->val);
@@ -123,6 +137,7 @@ void gen(Node *node) {
   case ND_LVAR:
   case ND_NUM:
   case ND_RETURN:
+  case ND_IF:
     break;
   }
 

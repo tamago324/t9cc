@@ -9,6 +9,9 @@
 /**
   program    = stmt*
   stmt       = expr ";"
+             | "if" "(" expr ")" stmt ("else" stmt)?
+             | "while" "(" expr ")" stmt
+             | "for" "(" expr? ";" expr? ";" expr? ")" stmt
              | "return" expr ";"
   expr       = assign
   assign	   = equality ("=" assign)?
@@ -129,6 +132,11 @@ int is_alnum(char c) {
          ('0' <= c && c <= '9') || (c == '_');
 }
 
+// キーワードかどうか
+int is_keyward(char *p, char *keyword) {
+  return startswith(p, keyword) && !is_alnum(p[strlen(keyword)]);
+}
+
 // 入力文字列p をトークナイズして、それを返す
 void tokenize() {
   char *p = user_input;
@@ -169,9 +177,15 @@ void tokenize() {
     }
 
     // return キーワード
-    if (startswith(p, "return") && !is_alnum(p[6])) {
+    if (is_keyward(p, "return")) {
       cur = new_token(TK_RETURN, cur, p, 6);
       p += 6;
+      continue;
+    }
+
+    if (is_keyward(p, "if")) {
+      cur = new_token(TK_IF, cur, p, 2);
+      p += 2;
       continue;
     }
 
@@ -243,9 +257,24 @@ void program() {
   code[i] = NULL;
 }
 
-// stmt = expr ";" | "return" expr ";"
+/**
+ stmt = expr ";"
+      | "if" "(" expr ")" stmt
+      | "return" expr ";"
+ */
 Node *stmt() {
   Node *node;
+
+  if (consume_by_kind(TK_IF)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_IF;
+    expect("(");
+    node->lhs = expr();
+    expect(")");
+    node->rhs = stmt();
+    return node;
+  }
+
   if (consume_by_kind(TK_RETURN)) {
     node = calloc(1, sizeof(Node));
     node->kind = ND_RETURN;
