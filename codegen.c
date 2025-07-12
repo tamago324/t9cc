@@ -25,6 +25,16 @@ void gen_lval(Node *node) {
 }
 
 void gen(Node *node) {
+  if (node->kind == ND_RETURN) {
+    gen(node->lhs);
+    printf("  pop rax\n");
+    // エピローグ
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    printf("  ret\n");
+    return;
+  }
+
   switch (node->kind) {
   case ND_NUM:
     // 終端文字だから、そのまま出力して終わり
@@ -59,6 +69,7 @@ void gen(Node *node) {
   case ND_NE:
   case ND_LT:
   case ND_LE:
+  case ND_RETURN:
     break;
   }
 
@@ -111,6 +122,7 @@ void gen(Node *node) {
   case ND_ASSIGN:
   case ND_LVAR:
   case ND_NUM:
+  case ND_RETURN:
     break;
   }
 

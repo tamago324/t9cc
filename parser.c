@@ -6,6 +6,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+/**
+  program    = stmt*
+  stmt       = expr ";"
+             | "return" expr ";"
+  expr       = assign
+  assign	   = equality ("=" assign)?
+  equality   = relational ("==" relational | "!=" relational)*
+  relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+  add        = mul ("+" mul | "-" mul)*
+  mul        = unary ("*" unary | "/" unary)*
+  unary      = ("+" | "-")? primary
+  primary    = num | ident | "(" expr ")"
+ */
+
 // 現在着目しているトークン (定義)
 Token *token;
 
@@ -43,8 +57,8 @@ bool consume(char *op) {
 }
 
 // 識別子かどうかチェックし、もしそうなら読み進める
-Token *consume_ident() {
-  if (token->kind != TK_IDENT) {
+Token *consume_by_kind(TokenKind kind) {
+  if (token->kind != kind) {
     return false;
   }
 
@@ -154,6 +168,13 @@ void tokenize() {
       continue;
     }
 
+    // return キーワード
+    if (startswith(p, "return") && !is_alnum(p[6])) {
+      cur = new_token(TK_RETURN, cur, p, 6);
+      p += 6;
+      continue;
+    }
+
     // 変数
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);
@@ -222,9 +243,16 @@ void program() {
   code[i] = NULL;
 }
 
-// stmt = expr ";"
+// stmt = expr ";" | "return" expr ";"
 Node *stmt() {
-  Node *node = expr();
+  Node *node;
+  if (consume_by_kind(TK_RETURN)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_RETURN;
+    node->lhs = expr();
+  } else {
+    node = expr();
+  }
   expect(";");
   return node;
 }
@@ -330,7 +358,7 @@ Node *primary() {
     return node;
   }
 
-  Token *tok = consume_ident();
+  Token *tok = consume_by_kind(TK_IDENT);
   if (tok) {
     // 識別子なら、LVAR (ローカル変数) として処理する
     Node *node = calloc(1, sizeof(Node));

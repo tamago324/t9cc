@@ -67,5 +67,10 @@ assert 3 'a=1;b=2;a+b;'
 assert 3 'abc=1;def=2;abc+def;'
 assert 6 'a1 = 1;b2 = 2;c_3 = 3;a1 + b2 + c_3;'
 
+# step11;
+assert 3 'return 3;'
+assert 4 'a=1; return a+3;'
+assert 14 'a = 3; b = 5 * 6 - 8; return a + b / 2;'
+
 echo OK
 
