@@ -109,6 +109,12 @@ Node *new_node_num(int val) {
 //   memcmp の結果は同じなら 0 を返す
 bool startswith(char *a, char *b) { return memcmp(a, b, strlen(b)) == 0; }
 
+// 識別子かどうか
+int is_alnum(char c) {
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
+         ('0' <= c && c <= '9') || (c == '_');
+}
+
 // 入力文字列p をトークナイズして、それを返す
 void tokenize() {
   char *p = user_input;
@@ -149,12 +155,12 @@ void tokenize() {
     }
 
     // 変数
-    if ('a' <= *p && *p <= 'z') {
+    if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);
       // a~z の部分までループして、消費しつつ、長さを取得する
       char *q = p;
       while (*p) {
-        if (!('a' <= *p && *p <= 'z')) {
+        if (!(is_alnum(*p))) {
           break;
         }
         p++;

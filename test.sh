@@ -65,6 +65,7 @@ assert 3 'a=1;b=2;a+b;'
 
 # step10
 assert 3 'abc=1;def=2;abc+def;'
+assert 6 'a1 = 1;b2 = 2;c_3 = 3;a1 + b2 + c_3;'
 
 echo OK
 
