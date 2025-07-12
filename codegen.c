@@ -47,7 +47,9 @@ void gen(Node *node) {
     printf("  pop rdi\n");
     printf("  pop rax\n");
     printf("  mov [rax], rdi\n");
-    printf("  push rdi\n"); // 右辺の値を push しておくのはなんでだろうか？
+    // 右辺の値を push しておくのはなんでだろうか？
+    //  -> C言語の代入演算子は、右辺の値を返す式であるため。
+    printf("  push rdi\n");
     return;
   case ND_ADD:
   case ND_SUB:
