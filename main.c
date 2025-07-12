@@ -26,7 +26,8 @@ int main(int argc, char **argv) {
   // プロローグ
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, 208\n"); // 変数26個分の領域を確保する
+  // 変数の数だけ確保する
+  printf("  sub rsp, %d\n", lvar_len() * 8);
 
   // 先頭の式から順にコード生成
   for (int i = 0; code[i]; i++) {

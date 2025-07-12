@@ -12,6 +12,9 @@ Token *token;
 // 複数文に対応するためのノードを格納する (定義)
 Node *code[100];
 
+// ローカル変数
+LVar *locals;
+
 // エラー箇所を報告する
 void error_at(char *loc, char *fmt, ...) {
   va_list ap;
@@ -141,13 +144,22 @@ void tokenize() {
       char *q = p;
       cur->val = strtol(p, &p, 10);
       // 長さを計算してセットしなおす
-      cur->len = q - p;
+      cur->len = p - q;
       continue;
     }
 
     // 変数
     if ('a' <= *p && *p <= 'z') {
-      cur = new_token(TK_IDENT, cur, p++, 1);
+      cur = new_token(TK_IDENT, cur, p, 0);
+      // a~z の部分までループして、消費しつつ、長さを取得する
+      char *q = p;
+      while (*p) {
+        if (!('a' <= *p && *p <= 'z')) {
+          break;
+        }
+        p++;
+      }
+      cur->len = p - q;
       continue;
     }
 
@@ -158,6 +170,26 @@ void tokenize() {
   new_token(TK_EOF, cur, p, 0);
   // 次に進めておく。 (最初はダミーのため。)
   token = head.next;
+}
+
+// 変数を名前で検索する。見つからなかったら NULL を返す
+LVar *find_lvar(Token *tok) {
+  for (LVar *var = locals; var; var = var->next) {
+    // memcmp は、結果が同じ場合、0 となるため、 !memcmp とする必要がある
+    if (var->len == tok->len && !memcmp(var->name, tok->str, var->len)) {
+      return var;
+    }
+  }
+  return NULL;
+}
+
+// ローカル変数の数
+int lvar_len() {
+  int i = 0;
+  for (LVar *var = locals; var; var = var->next) {
+    i++;
+  }
+  return i;
 }
 
 // 入れ子になるため、先に定義しておく
@@ -294,12 +326,32 @@ Node *primary() {
 
   Token *tok = consume_ident();
   if (tok) {
-    // 識別子なら、LVAR (左辺値) として処理する
+    // 識別子なら、LVAR (ローカル変数) として処理する
     Node *node = calloc(1, sizeof(Node));
     node->kind = ND_LVAR;
-    // ベースポインタからのオフセット
-    // a~zまでの識別子が埋まっている前提のため、8ビットごとに計算できる
-    node->offset = (tok->str[0] - 'a' + 1) * 8;
+
+    LVar *lvar = find_lvar(tok);
+    if (lvar) {
+      // すでに宣言されているものは、その変数のオフセットを使う
+      node->offset = lvar->offset;
+    } else {
+      // 新しい変数の場合は、新しい領域のオフセットを計算する
+      lvar = calloc(1, sizeof(LVar));
+      lvar->next = locals;
+      lvar->name = tok->str;
+      lvar->len = tok->len;
+      // ベースポインタからのオフセット
+      //   1つ前の変数からのオフセットで新しいオフセットが計算できる
+      if (locals) {
+        lvar->offset = locals->offset + 8;
+      } else {
+        lvar->offset = 0;
+      }
+      node->offset = lvar->offset; // これがコード生成のときに使用するもの
+
+      // 先頭の更新
+      locals = lvar;
+    }
     return node;
   }
 
