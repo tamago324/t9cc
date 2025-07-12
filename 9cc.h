@@ -41,8 +41,14 @@ struct Node {
   NodeKind kind; // ノードの型
   Node *lhs;     // 左側の木
   Node *rhs;     // 右側の木
-  int val;       // kind が ND_NUM の場合、数値が入る
-  int offset;    // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
+
+  // if のための属性
+  Node *cond; // 条件式
+  Node *then; // true のときに実行する文
+  Node *els;  // false のときに実行する文
+
+  int val;    // kind が ND_NUM の場合、数値が入る
+  int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
 };
 
 // ローカル変数の型 (連結リストで全変数を表現)

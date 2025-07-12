@@ -42,12 +42,12 @@ void gen(Node *node) {
   case ND_IF:
     labelSeq++;
     // 条件式を評価
-    gen(node->lhs);
+    gen(node->cond);
     printf("  pop rax\n"); // スタックの先頭に、条件式の結果が入っている
     // jump equals: false(0)の場合にジャンプする
     printf("  cmp rax, 0\n");
     printf("  je Lend%d\n", labelSeq);
-    gen(node->rhs);
+    gen(node->then);
     printf("Lend%d:\n", labelSeq);
 
   case ND_NUM:
