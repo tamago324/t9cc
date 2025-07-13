@@ -1,0 +1,9 @@
+{
+  "Debug printf": {
+    "prefix": "pf",
+    "body": [
+      "printf(\"${0}\\n\");"
+    ],
+    "description": "Debug printf with cursor position marker"
+  }
+}
