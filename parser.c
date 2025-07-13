@@ -189,6 +189,12 @@ void tokenize() {
       continue;
     }
 
+    if (is_keyward(p, "else")) {
+      cur = new_token(TK_ELSE, cur, p, 4);
+      p += 4;
+      continue;
+    }
+
     // 変数
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);
@@ -259,7 +265,7 @@ void program() {
 
 /**
  stmt = expr ";"
-      | "if" "(" expr ")" stmt
+      | "if" "(" expr ")" stmt ("else" stmt)?
       | "return" expr ";"
  */
 Node *stmt() {
@@ -272,6 +278,11 @@ Node *stmt() {
     node->cond = expr();
     expect(")");
     node->then = stmt();
+
+    // 1つ先読みする
+    if (consume_by_kind(TK_ELSE)) {
+      node->els = stmt();
+    }
     return node;
   }
 
