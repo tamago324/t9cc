@@ -72,6 +72,9 @@ struct LVar {
 // 入力プログラム (宣言)
 extern char *user_input;
 
+// 現在のトークン
+extern Token *token;
+
 // コード全体 (宣言)
 extern Node *code[100];
 
@@ -86,3 +89,6 @@ void gen(Node *node);
 
 // ローカル変数の数
 int lvar_len();
+
+// エラーの出力
+void error_at(char *loc, char *fmt, ...);
