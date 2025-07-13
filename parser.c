@@ -195,6 +195,12 @@ void tokenize() {
       continue;
     }
 
+    if (is_keyward(p, "while")) {
+      cur = new_token(TK_WHILE, cur, p, 5);
+      p += 5;
+      continue;
+    }
+
     // 変数
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);
@@ -266,6 +272,7 @@ void program() {
 /**
  stmt = expr ";"
       | "if" "(" expr ")" stmt ("else" stmt)?
+      | "while" "(" expr ")" stmt
       | "return" expr ";"
  */
 Node *stmt() {
@@ -279,10 +286,19 @@ Node *stmt() {
     expect(")");
     node->then = stmt();
 
-    // 1つ先読みする
     if (consume_by_kind(TK_ELSE)) {
       node->els = stmt();
     }
+    return node;
+  }
+
+  if (consume_by_kind(TK_WHILE)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_WHILE;
+    expect("(");
+    node->cond = expr();
+    expect(")");
+    node->then = stmt();
     return node;
   }
 

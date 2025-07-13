@@ -6,6 +6,7 @@ typedef enum {
   TK_RETURN,   // return のトークン
   TK_IF,       // if のトークン
   TK_ELSE,     // else のトークン
+  TK_WHILE,    // while のトークン
   TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
 
@@ -34,6 +35,7 @@ typedef enum {
   ND_NUM,    // 整数
   ND_RETURN, // return
   ND_IF,     // if
+  ND_WHILE,  // while
 } NodeKind;
 
 typedef struct Node Node;

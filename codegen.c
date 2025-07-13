@@ -59,6 +59,20 @@ void gen(Node *node) {
 
     printf("Lend%d:\n", labelSeq);
 
+  case ND_WHILE:
+    labelSeq++;
+    printf("Lbegin%d:\n", labelSeq);
+
+    gen(node->cond);
+    printf("  pop rax\n");
+    printf("  cmp rax, 0\n");
+    printf("  je Lend%d\n", labelSeq);
+
+    gen(node->then);
+    printf("  jmp Lbegin%d\n", labelSeq);
+
+    printf("Lend%d:\n", labelSeq);
+
   case ND_NUM:
     // 終端文字だから、そのまま出力して終わり
     printf("  push %d\n", node->val);
@@ -147,6 +161,7 @@ void gen(Node *node) {
   case ND_NUM:
   case ND_RETURN:
   case ND_IF:
+  case ND_WHILE:
     break;
   }
 
