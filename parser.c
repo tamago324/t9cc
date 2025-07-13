@@ -201,6 +201,12 @@ void tokenize() {
       continue;
     }
 
+    if (is_keyward(p, "for")) {
+      cur = new_token(TK_FOR, cur, p, 3);
+      p += 3;
+      continue;
+    }
+
     // 変数
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);
@@ -273,6 +279,7 @@ void program() {
  stmt = expr ";"
       | "if" "(" expr ")" stmt ("else" stmt)?
       | "while" "(" expr ")" stmt
+      | "for" "(" expr? ";" expr? ";" expr? ")" stmt
       | "return" expr ";"
  */
 Node *stmt() {
@@ -298,6 +305,30 @@ Node *stmt() {
     expect("(");
     node->cond = expr();
     expect(")");
+    node->then = stmt();
+    return node;
+  }
+
+  if (consume_by_kind(TK_FOR)) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_FOR;
+    expect("(");
+
+    if (!consume(";")) {
+      node->init = expr();
+      expect(";");
+    }
+
+    if (!consume(";")) {
+      node->cond = expr();
+      expect(";");
+    }
+
+    if (!consume(")")) {
+      node->inc = expr();
+      expect(")");
+    }
+
     node->then = stmt();
     return node;
   }
