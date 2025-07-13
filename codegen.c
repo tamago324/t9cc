@@ -46,32 +46,32 @@ void gen(Node *node) {
     printf("  pop rax\n"); // スタックの先頭に、条件式の結果が入っている
     // jump equals: false(0)の場合にジャンプする
     printf("  cmp rax, 0\n");
-    printf("  je Lelse%d\n", labelSeq);
+    printf("  je .Lelse%d\n", labelSeq);
     // true の場合
     gen(node->then);
-    printf("  jmp Lend%d\n", labelSeq);
+    printf("  jmp .Lend%d\n", labelSeq);
 
     // else の場合
-    printf("Lelse%d:\n", labelSeq);
+    printf(".Lelse%d:\n", labelSeq);
     if (node->els) {
       gen(node->els);
     }
 
-    printf("Lend%d:\n", labelSeq);
+    printf(".Lend%d:\n", labelSeq);
 
   case ND_WHILE:
     labelSeq++;
-    printf("Lbegin%d:\n", labelSeq);
+    printf(".Lbegin%d:\n", labelSeq);
 
     gen(node->cond);
     printf("  pop rax\n");
     printf("  cmp rax, 0\n");
-    printf("  je Lend%d\n", labelSeq);
+    printf("  je .Lend%d\n", labelSeq);
 
     gen(node->then);
-    printf("  jmp Lbegin%d\n", labelSeq);
+    printf("  jmp .Lbegin%d\n", labelSeq);
 
-    printf("Lend%d:\n", labelSeq);
+    printf(".Lend%d:\n", labelSeq);
 
   case ND_NUM:
     // 終端文字だから、そのまま出力して終わり
