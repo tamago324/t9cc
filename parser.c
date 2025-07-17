@@ -8,6 +8,7 @@
 /**
   program    = stmt*
   stmt       = expr ";"
+             | "{" stmt* "}"
              | "if" "(" expr ")" stmt ("else" stmt)?
              | "while" "(" expr ")" stmt
              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
@@ -140,6 +141,7 @@ void program() {
 
 /**
  stmt = expr ";"
+      | "{" stmt* "}"
       | "if" "(" expr ")" stmt ("else" stmt)?
       | "while" "(" expr ")" stmt
       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
@@ -147,6 +149,16 @@ void program() {
  */
 Node *stmt() {
   Node *node;
+
+  if (consume("{")) {
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_BLOCK;
+    node->stmts = node_vec_new();
+    while (!consume("}")) {
+      node_vec_push(node->stmts, stmt());
+    }
+    return node;
+  }
 
   if (consume_by_kind(TK_IF)) {
     node = calloc(1, sizeof(Node));

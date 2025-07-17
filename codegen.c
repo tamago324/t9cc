@@ -39,6 +39,14 @@ void gen(Node *node) {
 
   switch (node->kind) {
 
+  case ND_BLOCK:
+    for (int i = 0; i < node->stmts->size; i++) {
+      gen(node_vec_get(node->stmts, i));
+      // ステートメントが最後に生成する値を取り除く
+      printf("  pop rax\n");
+    }
+    return;
+
   case ND_IF:
     labelSeq++;
     // 条件式を評価
@@ -184,6 +192,7 @@ void gen(Node *node) {
   case ND_IF:
   case ND_WHILE:
   case ND_FOR:
+  case ND_BLOCK:
     break;
   }
 

@@ -38,7 +38,10 @@ typedef enum {
   ND_IF,     // if
   ND_WHILE,  // while
   ND_FOR,    // for
+  ND_BLOCK,  // block
 } NodeKind;
+
+typedef struct NodeVector NodeVector;
 
 typedef struct Node Node;
 
@@ -55,6 +58,9 @@ struct Node {
   // for のための属性 (cond, then も含む)
   Node *init; // 初期化式
   Node *inc;  // 更新式
+
+  // block のための属性
+  NodeVector *stmts; // ブロック内の文
 
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
@@ -92,3 +98,15 @@ int lvar_len();
 
 // エラーの出力
 void error_at(char *loc, char *fmt, ...);
+
+// Node 用のベクタ (動的配列)
+struct NodeVector {
+  Node **data;  // Node の配列
+  int size;     // 現在の要素数
+  int capacity; // 確保済み容量
+};
+
+NodeVector *node_vec_new();
+void node_vec_push(NodeVector *v, Node *node);
+Node *node_vec_get(NodeVector *v, int index);
+void node_vec_free(NodeVector *v);

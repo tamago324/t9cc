@@ -91,6 +91,10 @@ assert 10 'i=0; while(i<10) i=i+1; return i;'
 assert 55 'i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j;'
 assert 3 'for (;;) return 3; return 5;'
 
+# step13
+assert 10 'i=0; j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;'
+assert 10 '{return 10;}'
+
 echo OK
 
 
