@@ -151,12 +151,20 @@ Node *stmt() {
   Node *node;
 
   if (consume("{")) {
+    Node head;
+    head.next = NULL;
+    Node *cur = &head;
+
+    while (!consume("}")) {
+      // 後ろに追加していく
+      cur->next = stmt();
+      cur = cur->next;
+    }
+
     node = calloc(1, sizeof(Node));
     node->kind = ND_BLOCK;
-    node->stmts = node_vec_new();
-    while (!consume("}")) {
-      node_vec_push(node->stmts, stmt());
-    }
+    node->body = head.next;
+
     return node;
   }
 

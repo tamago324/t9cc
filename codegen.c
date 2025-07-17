@@ -40,8 +40,8 @@ void gen(Node *node) {
   switch (node->kind) {
 
   case ND_BLOCK:
-    for (int i = 0; i < node->stmts->size; i++) {
-      gen(node_vec_get(node->stmts, i));
+    for (Node *n = node->body; n; n = n->next) {
+      gen(n);
       // ステートメントが最後に生成する値を取り除く
       printf("  pop rax\n");
     }
