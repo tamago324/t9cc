@@ -21,7 +21,7 @@
   mul        = unary ("*" unary | "/" unary)*
   unary      = ("+" | "-")? primary
   primary    = num
-             | ident ("(" ")")?
+             | ident ("(" expr? ("," expr)* ")")?
              | "(" expr ")"
  */
 
@@ -355,7 +355,7 @@ Node *lvar(Token *tok) {
 }
 
 // primary = num
-//         | ident ("(" ")")?
+//         | ident ("(" expr? ("," expr)* ")")?
 //         | "(" expr ")"
 Node *primary() {
   if (consume("(")) {
@@ -373,8 +373,27 @@ Node *primary() {
       node->name = tok->str;
       node->len = tok->len;
 
-      // 今は、引数無しでの呼び出しのみ対応
-      expect(")");
+      if (consume(")")) {
+        // 引数無し
+        return node;
+      }
+
+      // 引数あり
+      Node head;
+      head.next = NULL;
+      Node *cur = &head;
+
+      cur->next = expr();
+      cur = cur->next;
+
+      while (!consume(")")) {
+        expect(",");
+        cur->next = expr();
+        cur = cur->next;
+      }
+
+      node->args = head.next;
+
       return node;
     } else {
       return lvar(tok);

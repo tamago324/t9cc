@@ -95,7 +95,11 @@ assert 3 'for (;;) return 3; return 5;'
 assert 10 'i=0; j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;'
 assert 10 '{return 10;}'
 
+# step14
 assert 10 '{foo(); return 10;}'
+
+assert 3 '{bar(1, 2); return 3;}'
+assert 21 '{huga(1, 2, 3, 4, 5, 6); return 21;}'
 
 echo OK
 

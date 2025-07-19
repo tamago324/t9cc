@@ -107,11 +107,47 @@ void gen(Node *node) {
     printf("  push %d\n", node->val);
     return;
 
-  case ND_CALL:
-    // cc -c で生成される test_func.o のシンボルテーブルでは、
-    // `foo` となっているため、合わせた
-    printf("  call %.*s\n", node->len, node->name);
-    return;
+  case ND_CALL: {
+    if (!node->args) {
+      printf("  call %.*s\n", node->len, node->name);
+      return;
+    } else {
+
+      // 引数あり
+      int argsLen = 0;
+      for (Node *n = node->args; n; n = n->next) {
+        gen(n);
+        argsLen++;
+      }
+      // 後ろから順にセットしていく
+      if (argsLen >= 6)
+        printf("  pop r9\n");
+      if (argsLen >= 5)
+        printf("  pop r8\n");
+      if (argsLen >= 4)
+        printf("  pop rcx\n");
+      if (argsLen >= 3)
+        printf("  pop rdx\n");
+      if (argsLen >= 2)
+        printf("  pop rsi\n");
+      if (argsLen >= 1)
+        printf("  pop rdi\n");
+
+      // x86-64 ABIの仕様上、RSP (スタックの先頭) を16の倍数に調整。
+      // 切り下げる理由は、スタックは下に伸びるため。
+      // 補数を使うことで、16の倍数にできる。
+      // 17 & 10000 = 10001 & 10000 = 10000 = 16
+      printf("  mov r12, rsp\n");
+      printf("  and rsp, -16\n");
+
+      printf("  call %.*s\n", node->len, node->name);
+
+      printf("  mov rsp, r12\n");
+      // call の結果を積んでおく (呼び出された側は RAX にいれるだけのため)
+      printf("  push rax\n");
+      return;
+    }
+  }
 
   case ND_LVAR:
     // 変数のアドレスを計算してスタックに積む
