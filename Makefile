@@ -7,7 +7,11 @@ OBJS=$(SRCS:.c=.o)
 
 $(OBJS): 9cc.h
 
-test: 9cc
+# 外部で関数を定義したもののオブジェクトファイルを生成
+test_func.o: test_func.c
+	$(CC) $(CFLAGS) -c test_func.c
+
+test: 9cc test_func.o
 	./test.sh
 	
 clean:

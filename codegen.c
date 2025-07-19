@@ -106,6 +106,13 @@ void gen(Node *node) {
     // 終端文字だから、そのまま出力して終わり
     printf("  push %d\n", node->val);
     return;
+
+  case ND_CALL:
+    // cc -c で生成される test_func.o のシンボルテーブルでは、
+    // `foo` となっているため、合わせた
+    printf("  call %.*s\n", node->len, node->name);
+    return;
+
   case ND_LVAR:
     // 変数のアドレスを計算してスタックに積む
     gen_lval(node);
@@ -193,6 +200,7 @@ void gen(Node *node) {
   case ND_WHILE:
   case ND_FOR:
   case ND_BLOCK:
+  case ND_CALL:
     break;
   }
 

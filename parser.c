@@ -20,7 +20,9 @@
   add        = mul ("+" mul | "-" mul)*
   mul        = unary ("*" unary | "/" unary)*
   unary      = ("+" | "-")? primary
-  primary    = num | ident | "(" expr ")"
+  primary    = num
+             | ident ("(" ")")?
+             | "(" expr ")"
  */
 
 // 複数文に対応するためのノードを格納する (定義)
@@ -320,7 +322,41 @@ Node *unary() {
   return primary();
 }
 
-// primary = num | ident | "(" expr ")"
+// 変数
+Node *lvar(Token *tok) {
+  // 識別子なら、LVAR (ローカル変数) として処理する
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_LVAR;
+
+  LVar *lvar = find_lvar(tok);
+  if (lvar) {
+    // すでに宣言されているものは、その変数のオフセットを使う
+    node->offset = lvar->offset;
+  } else {
+    // 新しい変数の場合は、新しい領域のオフセットを計算する
+    lvar = calloc(1, sizeof(LVar));
+    lvar->next = locals;
+    lvar->name = tok->str;
+    lvar->len = tok->len;
+    // ベースポインタからのオフセット
+    //   1つ前の変数からのオフセットで新しいオフセットが計算できる
+    if (locals) {
+      lvar->offset = locals->offset + 8;
+    } else {
+      lvar->offset = 0;
+    }
+    node->offset = lvar->offset; // これがコード生成のときに使用するもの
+
+    // 先頭の更新
+    locals = lvar;
+  }
+
+  return node;
+}
+
+// primary = num
+//         | ident ("(" ")")?
+//         | "(" expr ")"
 Node *primary() {
   if (consume("(")) {
     Node *node = expr();
@@ -330,33 +366,19 @@ Node *primary() {
 
   Token *tok = consume_by_kind(TK_IDENT);
   if (tok) {
-    // 識別子なら、LVAR (ローカル変数) として処理する
-    Node *node = calloc(1, sizeof(Node));
-    node->kind = ND_LVAR;
+    if (consume("(")) {
+      // 関数呼び出し
+      Node *node = calloc(1, sizeof(Node));
+      node->kind = ND_CALL;
+      node->name = tok->str;
+      node->len = tok->len;
 
-    LVar *lvar = find_lvar(tok);
-    if (lvar) {
-      // すでに宣言されているものは、その変数のオフセットを使う
-      node->offset = lvar->offset;
+      // 今は、引数無しでの呼び出しのみ対応
+      expect(")");
+      return node;
     } else {
-      // 新しい変数の場合は、新しい領域のオフセットを計算する
-      lvar = calloc(1, sizeof(LVar));
-      lvar->next = locals;
-      lvar->name = tok->str;
-      lvar->len = tok->len;
-      // ベースポインタからのオフセット
-      //   1つ前の変数からのオフセットで新しいオフセットが計算できる
-      if (locals) {
-        lvar->offset = locals->offset + 8;
-      } else {
-        lvar->offset = 0;
-      }
-      node->offset = lvar->offset; // これがコード生成のときに使用するもの
-
-      // 先頭の更新
-      locals = lvar;
+      return lvar(tok);
     }
-    return node;
   }
 
   return new_node_num(expect_number());

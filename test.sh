@@ -7,8 +7,8 @@ assert() {
 
   # 入力を渡して、アセンブリに変換
   ./9cc "$input" > tmp.s
-  # 実行ファイル作成
-  cc -o tmp tmp.s
+  # 実行ファイル作成 (+テスト関数が書かれたオブジェクトファイルをリンク)
+  cc -o tmp tmp.s test_func.o
   
   # == 実行 ==
   ./tmp
@@ -94,6 +94,8 @@ assert 3 'for (;;) return 3; return 5;'
 # step13
 assert 10 'i=0; j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;'
 assert 10 '{return 10;}'
+
+assert 10 '{foo(); return 10;}'
 
 echo OK
 

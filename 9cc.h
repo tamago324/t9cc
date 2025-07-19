@@ -39,6 +39,7 @@ typedef enum {
   ND_WHILE,  // while
   ND_FOR,    // for
   ND_BLOCK,  // block
+  ND_CALL,   // 関数呼び出し
 } NodeKind;
 
 typedef struct Node Node;
@@ -60,6 +61,10 @@ struct Node {
   // block のための属性
   Node *body; // ブロック内の文のリスト (連結リストで複数文を表現)
   Node *next;
+
+  // 関数呼び出しのための属性
+  char *name; // 関数名
+  int len;    // 関数名の長さ
 
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
