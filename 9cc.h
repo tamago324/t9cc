@@ -63,9 +63,8 @@ struct Node {
   Node *next;
 
   // 関数呼び出しのための属性
-  char *name; // 関数名
-  int len;    // 関数名の長さ
-  Node *args; // 引数のリスト (連結リストで複数文を表現)
+  char *funcname; // 関数名
+  Node *args;     // 引数のリスト (連結リストで複数文を表現)
 
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る

@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "9cc.h"
 #include <stdarg.h>
 #include <stdbool.h>
@@ -390,9 +391,7 @@ Node *primary() {
       // 関数呼び出し
       Node *node = calloc(1, sizeof(Node));
       node->kind = ND_CALL;
-      node->name = tok->str;
-      node->len = tok->len;
-
+      node->funcname = strndup(tok->str, tok->len);
       node->args = func_args();
 
       return node;

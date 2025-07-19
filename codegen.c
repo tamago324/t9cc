@@ -109,7 +109,7 @@ void gen(Node *node) {
 
   case ND_CALL: {
     if (!node->args) {
-      printf("  call %.*s\n", node->len, node->name);
+      printf("  call %s\n", node->funcname);
       return;
     } else {
 
@@ -140,7 +140,7 @@ void gen(Node *node) {
       printf("  mov r12, rsp\n");
       printf("  and rsp, -16\n");
 
-      printf("  call %.*s\n", node->len, node->name);
+      printf("  call %s\n", node->funcname);
 
       printf("  mov rsp, r12\n");
       // call の結果を積んでおく (呼び出された側は RAX にいれるだけのため)
