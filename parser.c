@@ -21,8 +21,9 @@
   mul        = unary ("*" unary | "/" unary)*
   unary      = ("+" | "-")? primary
   primary    = num
-             | ident ("(" expr? ("," expr)* ")")?
+             | ident func-args?
              | "(" expr ")"
+  func-args  = "(" (expr ("," expr)*)? ")"
  */
 
 // 複数文に対応するためのノードを格納する (定義)
@@ -354,8 +355,27 @@ Node *lvar(Token *tok) {
   return node;
 }
 
+// func-args = "(" (expr ("," expr)*)? ")"
+Node *func_args() {
+  if (consume(")")) {
+    // 引数無し
+    return NULL;
+  }
+
+  // 引数あり
+  Node *head = expr();
+  Node *cur = head;
+
+  while (consume(",")) {
+    cur->next = expr();
+    cur = cur->next;
+  }
+  expect(")");
+  return head;
+}
+
 // primary = num
-//         | ident ("(" expr? ("," expr)* ")")?
+//         | ident func-args?
 //         | "(" expr ")"
 Node *primary() {
   if (consume("(")) {
@@ -373,26 +393,7 @@ Node *primary() {
       node->name = tok->str;
       node->len = tok->len;
 
-      if (consume(")")) {
-        // 引数無し
-        return node;
-      }
-
-      // 引数あり
-      Node head;
-      head.next = NULL;
-      Node *cur = &head;
-
-      cur->next = expr();
-      cur = cur->next;
-
-      while (!consume(")")) {
-        expect(",");
-        cur->next = expr();
-        cur = cur->next;
-      }
-
-      node->args = head.next;
+      node->args = func_args();
 
       return node;
     } else {
