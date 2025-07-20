@@ -108,6 +108,15 @@ assert 7 'main() {return one()+two()*3;} one(){1;} two(){return 2; 100;}'
 assert 1 'main(){huga(1);} huga(a) { a; }'
 assert 21 'main(){huga(1, 2, 3, 4, 5, 6);} huga(a, b, c, d, e, f) { a+b+c+d+e+f; }'
 
+# フィボナッチ数列のテスト (再帰を使う)
+assert 0 'main(){return fib(0);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 1 'main(){return fib(1);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 1 'main(){return fib(2);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 2 'main(){return fib(3);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 3 'main(){return fib(4);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 5 'main(){return fib(5);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+assert 8 'main(){return fib(6);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
+
 echo OK
 
 

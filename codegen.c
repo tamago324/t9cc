@@ -90,8 +90,6 @@ void gen(Node *node) {
   case ND_BLOCK:
     for (Node *n = node->body; n; n = n->next) {
       gen(n);
-      // ステートメントが最後に生成する値を取り除く
-      printf("  pop rax\n");
     }
     return;
 
@@ -100,16 +98,19 @@ void gen(Node *node) {
     // 条件式を評価
     gen(node->cond);
     printf("  pop rax\n"); // スタックの先頭に、条件式の結果が入っている
-    // jump equals: false(0)の場合にジャンプする
-    printf("  cmp rax, 0\n");
-    printf("  je .Lelse%d\n", labelSeq);
-    // true の場合
-    gen(node->then);
-    printf("  jmp .Lend%d\n", labelSeq);
+    if (!node->els) {
+      // jump equals: false(0)の場合にジャンプする
+      printf("  cmp rax, 0\n");
+      printf("  je .Lend%d\n", labelSeq);
+      gen(node->then);
+    } else {
+      // jump equals: false(0)の場合にジャンプする
+      printf("  cmp rax, 0\n");
+      printf("  je .Lelse%d\n", labelSeq);
+      gen(node->then);
+      printf("  jmp .Lend%d\n", labelSeq);
 
-    // else の場合
-    printf(".Lelse%d:\n", labelSeq);
-    if (node->els) {
+      printf(".Lelse%d:\n", labelSeq);
       gen(node->els);
     }
 
@@ -176,16 +177,21 @@ void gen(Node *node) {
     if (argsLen >= 1)
       printf("  pop rdi\n");
 
-    // x86-64 ABIの仕様上、RSP (スタックの先頭) を16の倍数に調整。
-    // 切り下げる理由は、スタックは下に伸びるため。
-    // 補数を使うことで、16の倍数にできる。
-    // 17 & 10000 = 10001 & 10000 = 10000 = 16
-    printf("  mov r12, rsp\n");
-    printf("  and rsp, -16\n");
-
+    // RSPを16バイト境界に調整 (リファレンス実装のものを使用)
+    labelSeq++;
+    printf("  mov rax, rsp\n");
+    printf("  and rax, 15\n");            // 16で割った余りを取得
+    printf("  jnz .Lcall%d\n", labelSeq); // 16のあまりが0ではないならジャンプ
+    printf("  mov rax, 0\n"); // 非可変長引数関数のため、RAX に0をセット
     printf("  call %s\n", node->funcname);
+    printf("  jmp .Lend%d\n", labelSeq);
+    printf(".Lcall%d:\n", labelSeq);
+    printf("  sub rsp, 8\n"); // call でリターンアドレスが8バイトのため、調整
+    printf("  mov rax, 0\n"); // 非可変長引数関数のため、RAX に0をセット
+    printf("  call %s\n", node->funcname);
+    printf("  add rsp, 8\n");
+    printf(".Lend%d:\n", labelSeq);
 
-    printf("  mov rsp, r12\n");
     // call の結果を積んでおく (呼び出された側は RAX にいれるだけのため)
     printf("  push rax\n");
     return;
