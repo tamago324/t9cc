@@ -324,7 +324,10 @@ Node *stmt() {
     // エピローグのラベルにジャンプするときに使用する
     node->funcname = cur_func->funcname;
   } else {
-    node = expr();
+    // 式文
+    node = calloc(1, sizeof(Node));
+    node->kind = ND_EXPR_STMT;
+    node->lhs = expr();
   }
   expect(";");
   return node;

@@ -46,6 +46,11 @@ void gen(Node *node) {
 
   switch (node->kind) {
 
+  case ND_EXPR_STMT:
+    gen(node->lhs);
+    printf("  add rsp, 8\n"); // 式文は、結果 (スタックの先頭) を捨てる
+    return;
+
   case ND_FUNCDEF:
     printf("%s:\n", node->funcname);
 
