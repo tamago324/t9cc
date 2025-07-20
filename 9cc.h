@@ -41,6 +41,7 @@ typedef enum {
   ND_BLOCK,   // block
   ND_CALL,    // 関数呼び出し
   ND_FUNCDEF, // 関数定義
+  ND_ARG,     // 関数定義の引数
 } NodeKind;
 
 // ローカル変数の型 (連結リストで全変数を表現)
@@ -77,6 +78,7 @@ struct Node {
   Node *args;     // 引数のリスト (連結リストで複数文を表現)
   LVar *locals;   // 関数内のローカル変数
 
+  // 関数定義の引数のための属性
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
 };

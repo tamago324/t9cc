@@ -54,6 +54,28 @@ void gen(Node *node) {
     printf("  mov rbp, rsp\n");
     printf("  sub rsp, %d\n", lvar_len(node) * 8);
 
+    // 引数レジスタの値をローカル変数の値としてセットする
+    int argsLen = 0;
+    for (Node *n = node->args; n; n = n->next) {
+      printf("  mov rax, rbp\n");
+      printf("  sub rax, %d\n", n->offset);
+
+      argsLen += 1;
+
+      if (argsLen == 6)
+        printf("  mov [rax], r9\n");
+      if (argsLen == 5)
+        printf("  mov [rax], r8\n");
+      if (argsLen == 4)
+        printf("  mov [rax], rcx\n");
+      if (argsLen == 3)
+        printf("  mov [rax], rdx\n");
+      if (argsLen == 2)
+        printf("  mov [rax], rsi\n");
+      if (argsLen == 1)
+        printf("  mov [rax], rdi\n");
+    }
+
     gen(node->body);
 
     // エピローグ
@@ -199,6 +221,7 @@ void gen(Node *node) {
   case ND_LT:
   case ND_LE:
   case ND_RETURN:
+  case ND_ARG:
     break;
   }
 
@@ -258,6 +281,7 @@ void gen(Node *node) {
   case ND_BLOCK:
   case ND_CALL:
   case ND_FUNCDEF:
+  case ND_ARG:
     break;
   }
 

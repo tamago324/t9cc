@@ -112,6 +112,34 @@ LVar *find_lvar(Token *tok) {
   return NULL;
 }
 
+// 変数の領域のオフセットを取得する
+// 既に宣言されている場合は、その変数のオフセット、まだの場合は領域を確保する
+int lvar_offset(Token *tok) {
+  LVar *lvar = find_lvar(tok);
+  if (lvar) {
+    // すでに宣言されているものは、その変数のオフセットを使う
+    return lvar->offset;
+  } else {
+    // 新しい変数の場合は、新しい領域のオフセットを計算する
+    lvar = calloc(1, sizeof(LVar));
+    lvar->next = cur_func->locals;
+    lvar->name = tok->str;
+    lvar->len = tok->len;
+    // ベースポインタからのオフセット
+    //   1つ前の変数からのオフセットで新しいオフセットが計算できる
+    if (cur_func->locals) {
+      lvar->offset = cur_func->locals->offset + 8;
+    } else {
+      // オフセットを8にしておくことで、関数の引数の領域を確保できる
+      lvar->offset = 8;
+    }
+    // 先頭の更新
+    cur_func->locals = lvar;
+
+    return lvar->offset; // これがコード生成のときに使用するもの
+  }
+}
+
 // 入れ子になるため、先に定義しておく
 Node *func_def();
 Node *func_def_args();
@@ -175,12 +203,41 @@ Node *func_def() {
   return node;
 }
 
-// func-def-args = "(" ")"
+// 関数定義の引数
+Node *arg() {
+  Token *tok = consume_by_kind(TK_IDENT);
+  if (!tok) {
+    error_at(token->str, "ident ではありません");
+  }
+
+  Node *node = calloc(1, sizeof(Node));
+  node->kind = ND_ARG;
+  // 引数をローカル変数として領域を確保する
+  //   プロローグでそのローカル変数にレジスタから値をコピーすることでローカル変数と同じように扱える
+  node->offset = lvar_offset(tok);
+  return node;
+}
+
+// func-def-args = "(" (ident ("," ident)*)? ")"
 Node *func_def_args() {
   // 今は引数無しだけにしておく
   expect("(");
+  if (consume(")")) {
+    // 引数無し
+    return NULL;
+  }
+
+  // 引数あり
+  Node *head = arg();
+  Node *cur = head;
+
+  while (consume(",")) {
+    cur->next = arg();
+    cur = cur->next;
+  }
   expect(")");
-  return NULL;
+
+  return head;
 }
 
 /**
@@ -371,30 +428,7 @@ Node *lvar(Token *tok) {
   // 識別子なら、LVAR (ローカル変数) として処理する
   Node *node = calloc(1, sizeof(Node));
   node->kind = ND_LVAR;
-
-  LVar *lvar = find_lvar(tok);
-  if (lvar) {
-    // すでに宣言されているものは、その変数のオフセットを使う
-    node->offset = lvar->offset;
-  } else {
-    // 新しい変数の場合は、新しい領域のオフセットを計算する
-    lvar = calloc(1, sizeof(LVar));
-    lvar->next = cur_func->locals;
-    lvar->name = tok->str;
-    lvar->len = tok->len;
-    // ベースポインタからのオフセット
-    //   1つ前の変数からのオフセットで新しいオフセットが計算できる
-    if (cur_func->locals) {
-      lvar->offset = cur_func->locals->offset + 8;
-    } else {
-      lvar->offset = 0;
-    }
-    node->offset = lvar->offset; // これがコード生成のときに使用するもの
-
-    // 先頭の更新
-    cur_func->locals = lvar;
-  }
-
+  node->offset = lvar_offset(tok);
   return node;
 }
 

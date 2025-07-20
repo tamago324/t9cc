@@ -105,6 +105,9 @@ assert 21 'main(){huga(1, 2, 3, 4, 5, 6); return 21;}'
 assert 1 'main() {return 1;}'
 assert 7 'main() {return one()+two()*3;} one(){1;} two(){return 2; 100;}'
 
+assert 1 'main(){huga(1);} huga(a) { a; }'
+assert 21 'main(){huga(1, 2, 3, 4, 5, 6);} huga(a, b, c, d, e, f) { a+b+c+d+e+f; }'
+
 echo OK
 
 
