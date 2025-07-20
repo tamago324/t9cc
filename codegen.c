@@ -293,6 +293,7 @@ void gen(Node *node) {
   case ND_CALL:
   case ND_FUNCDEF:
   case ND_ARG:
+  case ND_EXPR_STMT:
     break;
   }
 
