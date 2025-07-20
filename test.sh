@@ -24,48 +24,48 @@ assert() {
 
 # assert 期待値 入力
 
-assert 0 'main() {0;}'
-assert 42 'main() {42;}'
-assert 21 'main() {5+20-4;}'
-assert 51 'main() {5 - 3 + 99 - 50;}'
+assert 0 'main() {return 0;}'
+assert 42 'main() {return 42;}'
+assert 21 'main() {return 5+20-4;}'
+assert 51 'main() {return 5 - 3 + 99 - 50;}'
 
 # step5
-assert 98 'main() {200 - (3 + 99);}'
-assert 7 'main() {1+2*3;}'
-assert 26 'main() {2*3+4*5;}'
-assert 2 'main() {1+2+10-(2+3*3);}'
+assert 98 'main() {return 200 - (3 + 99);}'
+assert 7 'main() {return 1+2*3;}'
+assert 26 'main() {return 2*3+4*5;}'
+assert 2 'main() {return 1+2+10-(2+3*3);}'
 
 # step6
-assert 10 'main() {-10+20;}'
-assert 7 'main() {-(5+8)+20;}'
+assert 10 'main() {return -10+20;}'
+assert 7 'main() {return -(5+8)+20;}'
 
 # step7
-assert 0 'main() {0==1;}'
-assert 1 'main() {42==42;}'
-assert 1 'main() {0!=1;}'
-assert 0 'main() {42!=42;}'
+assert 0 'main() {return 0==1;}'
+assert 1 'main() {return 42==42;}'
+assert 1 'main() {return 0!=1;}'
+assert 0 'main() {return 42!=42;}'
 
-assert 1 'main() {0<1;}'
-assert 0 'main() {1<1;}'
-assert 0 'main() {2<1;}'
-assert 1 'main() {0<=1;}'
-assert 1 'main() {1<=1;}'
-assert 0 'main() {2<=1;}'
+assert 1 'main() {return 0<1;}'
+assert 0 'main() {return 1<1;}'
+assert 0 'main() {return 2<1;}'
+assert 1 'main() {return 0<=1;}'
+assert 1 'main() {return 1<=1;}'
+assert 0 'main() {return 2<=1;}'
 
-assert 1 'main() {1>0;}'
-assert 0 'main() {1>1;}'
-assert 0 'main() {1>2;}'
-assert 1 'main() {1>=0;}'
-assert 1 'main() {1>=1;}'
-assert 0 'main() {1>=2;}'
+assert 1 'main() {return 1>0;}'
+assert 0 'main() {return 1>1;}'
+assert 0 'main() {return 1>2;}'
+assert 1 'main() {return 1>=0;}'
+assert 1 'main() {return 1>=1;}'
+assert 0 'main() {return 1>=2;}'
 
 # step9
-assert 3 'main() {1;2;3;}'
-assert 3 'main() {a=1;b=2;a+b;}'
+assert 3 'main() {1;2; return 3;}'
+assert 3 'main() {a=1;b=2; return a+b;}'
 
 # step10
-assert 3 'main() {abc=1;def=2;abc+def;}'
-assert 6 'main() {a1 = 1;b2 = 2;c_3 = 3;a1 + b2 + c_3;}'
+assert 3 'main() {abc=1;def=2; return abc+def;}'
+assert 6 'main() {a1 = 1;b2 = 2;c_3 = 3; return a1 + b2 + c_3;}'
 
 # step11;
 assert 3 'main() {return 3;}'
@@ -103,10 +103,10 @@ assert 21 'main(){huga(1, 2, 3, 4, 5, 6); return 21;}'
 
 # step15
 assert 1 'main() {return 1;}'
-assert 7 'main() {return one()+two()*3;} one(){1;} two(){return 2; 100;}'
+assert 7 'main() {return one()+two()*3;} one(){return 1;} two(){return 2; 100;}'
 
-assert 1 'main(){huga(1);} huga(a) { a; }'
-assert 21 'main(){huga(1, 2, 3, 4, 5, 6);} huga(a, b, c, d, e, f) { a+b+c+d+e+f; }'
+assert 1 'main(){ return huga(1);} huga(a) { a; }'
+assert 21 'main(){ return huga(1, 2, 3, 4, 5, 6);} huga(a, b, c, d, e, f) { a+b+c+d+e+f; }'
 
 # フィボナッチ数列のテスト (再帰を使う)
 assert 0 'main(){return fib(0);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
