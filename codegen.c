@@ -15,6 +15,15 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
+// ローカル変数の数
+int lvar_len(Node *node) {
+  int i = 0;
+  for (LVar *var = node->locals; var; var = var->next) {
+    i++;
+  }
+  return i;
+}
+
 // 左辺の変数のアドレスを算出して、スタックに積む
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR) {
@@ -30,14 +39,31 @@ void gen(Node *node) {
   if (node->kind == ND_RETURN) {
     gen(node->lhs);
     printf("  pop rax\n");
-    // エピローグ
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-    printf("  ret\n");
+    // 関数のエピローグにジャンプする
+    printf("  jmp Lepilogue%s\n", node->funcname);
     return;
   }
 
   switch (node->kind) {
+
+  case ND_FUNCDEF:
+    printf("%s:\n", node->funcname);
+
+    // プロローグ
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", lvar_len(node) * 8);
+
+    gen(node->body);
+
+    // エピローグ
+    printf("Lepilogue%s:\n", node->funcname);
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    // ret でリターンアドレスにジャンプできる
+    printf("  ret\n");
+
+    return;
 
   case ND_BLOCK:
     for (Node *n = node->body; n; n = n->next) {
@@ -231,6 +257,7 @@ void gen(Node *node) {
   case ND_FOR:
   case ND_BLOCK:
   case ND_CALL:
+  case ND_FUNCDEF:
     break;
   }
 

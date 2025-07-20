@@ -7,7 +7,9 @@
 #include <string.h>
 
 /**
-  program    = stmt*
+  program    = func-def func-def*
+  func-def   = ident func-def-args "{" stmt* "}"
+  func-def-args = "(" (ident ("," ident)*)? ")"
   stmt       = expr ";"
              | "{" stmt* "}"
              | "if" "(" expr ")" stmt ("else" stmt)?
@@ -30,8 +32,8 @@
 // 複数文に対応するためのノードを格納する (定義)
 Node *code[100];
 
-// ローカル変数
-LVar *locals;
+// 現在の関数 (return するときのラベル名に使用する)
+Node *cur_func;
 
 // 現在のトークンが期待している記号のときは、トークンを消費して
 // true を返す。
@@ -101,7 +103,7 @@ Node *new_node_num(int val) {
 
 // 変数を名前で検索する。見つからなかったら NULL を返す
 LVar *find_lvar(Token *tok) {
-  for (LVar *var = locals; var; var = var->next) {
+  for (LVar *var = cur_func->locals; var; var = var->next) {
     // memcmp は、結果が同じ場合、0 となるため、 !memcmp とする必要がある
     if (var->len == tok->len && !memcmp(var->name, tok->str, var->len)) {
       return var;
@@ -110,16 +112,9 @@ LVar *find_lvar(Token *tok) {
   return NULL;
 }
 
-// ローカル変数の数
-int lvar_len() {
-  int i = 0;
-  for (LVar *var = locals; var; var = var->next) {
-    i++;
-  }
-  return i;
-}
-
 // 入れ子になるため、先に定義しておく
+Node *func_def();
+Node *func_def_args();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -130,17 +125,62 @@ Node *mul();
 Node *unary();
 Node *primary();
 
-// program = stmt*
+// program    = func-def func-def*
 void program() {
   int i = 0;
+  code[i++] = func_def();
 
   while (!at_eof()) {
-    code[i] = stmt();
-    i++;
+    code[i++] = func_def();
   }
 
   // 最後は NULL を入れておく
   code[i] = NULL;
+}
+
+// func-def = ident func-def-args "{" stmt* "}"
+Node *func_def() {
+  Token *tok = consume_by_kind(TK_IDENT);
+  if (!tok) {
+    error_at(token->str, "ident ではありません");
+  }
+
+  Node *node = calloc(1, sizeof(Node));
+  cur_func = node;
+  node->kind = ND_FUNCDEF;
+  node->funcname = strndup(tok->str, tok->len);
+  node->args = func_def_args();
+
+  // block
+  // TODO: stmt の部分と合わせて、関数にしておきたい
+  expect("{");
+
+  Node head;
+  head.next = NULL;
+  Node *cur = &head;
+
+  while (!consume("}")) {
+    // 後ろに追加していく
+    cur->next = stmt();
+    cur = cur->next;
+  }
+
+  // ND_BLOCK とすることで、if や for と同じコード生成の処理を通せる
+  Node *body = calloc(1, sizeof(Node));
+  body->kind = ND_BLOCK;
+  body->body = head.next;
+
+  node->body = body;
+
+  return node;
+}
+
+// func-def-args = "(" ")"
+Node *func_def_args() {
+  // 今は引数無しだけにしておく
+  expect("(");
+  expect(")");
+  return NULL;
 }
 
 /**
@@ -224,6 +264,8 @@ Node *stmt() {
     node = calloc(1, sizeof(Node));
     node->kind = ND_RETURN;
     node->lhs = expr();
+    // エピローグのラベルにジャンプするときに使用する
+    node->funcname = cur_func->funcname;
   } else {
     node = expr();
   }
@@ -337,20 +379,20 @@ Node *lvar(Token *tok) {
   } else {
     // 新しい変数の場合は、新しい領域のオフセットを計算する
     lvar = calloc(1, sizeof(LVar));
-    lvar->next = locals;
+    lvar->next = cur_func->locals;
     lvar->name = tok->str;
     lvar->len = tok->len;
     // ベースポインタからのオフセット
     //   1つ前の変数からのオフセットで新しいオフセットが計算できる
-    if (locals) {
-      lvar->offset = locals->offset + 8;
+    if (cur_func->locals) {
+      lvar->offset = cur_func->locals->offset + 8;
     } else {
       lvar->offset = 0;
     }
     node->offset = lvar->offset; // これがコード生成のときに使用するもの
 
     // 先頭の更新
-    locals = lvar;
+    cur_func->locals = lvar;
   }
 
   return node;

@@ -23,24 +23,34 @@ struct Token {
 
 // 抽象構文木のノードの種類
 typedef enum {
-  ND_ADD,    // +
-  ND_SUB,    // -
-  ND_MUL,    // *
-  ND_DIV,    // /
-  ND_ASSIGN, // =
-  ND_LVAR,   // ローカル変数
-  ND_EQ,     // ==
-  ND_NE,     // !=
-  ND_LT,     // < (Less Than)
-  ND_LE,     // <= (Less than or Equal)
-  ND_NUM,    // 整数
-  ND_RETURN, // return
-  ND_IF,     // if
-  ND_WHILE,  // while
-  ND_FOR,    // for
-  ND_BLOCK,  // block
-  ND_CALL,   // 関数呼び出し
+  ND_ADD,     // +
+  ND_SUB,     // -
+  ND_MUL,     // *
+  ND_DIV,     // /
+  ND_ASSIGN,  // =
+  ND_LVAR,    // ローカル変数
+  ND_EQ,      // ==
+  ND_NE,      // !=
+  ND_LT,      // < (Less Than)
+  ND_LE,      // <= (Less than or Equal)
+  ND_NUM,     // 整数
+  ND_RETURN,  // return
+  ND_IF,      // if
+  ND_WHILE,   // while
+  ND_FOR,     // for
+  ND_BLOCK,   // block
+  ND_CALL,    // 関数呼び出し
+  ND_FUNCDEF, // 関数定義
 } NodeKind;
+
+// ローカル変数の型 (連結リストで全変数を表現)
+typedef struct LVar LVar;
+struct LVar {
+  LVar *next; // 次の変数 or NULL
+  char *name; // 変数名
+  int len;    // 名前の長さ
+  int offset; // RBP からのオフセット (これがスタック領域の割り当てと同等)
+};
 
 typedef struct Node Node;
 
@@ -65,18 +75,10 @@ struct Node {
   // 関数呼び出しのための属性
   char *funcname; // 関数名
   Node *args;     // 引数のリスト (連結リストで複数文を表現)
+  LVar *locals;   // 関数内のローカル変数
 
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
-};
-
-// ローカル変数の型 (連結リストで全変数を表現)
-typedef struct LVar LVar;
-struct LVar {
-  LVar *next; // 次の変数 or NULL
-  char *name; // 変数名
-  int len;    // 名前の長さ
-  int offset; // RBP からのオフセット (これがスタック領域の割り当てと同等)
 };
 
 // 入力プログラム (宣言)
@@ -96,9 +98,6 @@ void program();
 
 // コード生成
 void gen(Node *node);
-
-// ローカル変数の数
-int lvar_len();
 
 // エラーの出力
 void error_at(char *loc, char *fmt, ...);
