@@ -79,12 +79,28 @@ int expect_number() {
   return val;
 }
 
+// 現在のトークンが識別子の場合、そのトークンを消費して、次に進む
+// それ以外の場合にはエラーを報告する
+Token *expect_ident() {
+  if (token->kind != TK_IDENT)
+    error_at(token->str, "ident ではありません");
+
+  Token *tok = token;
+  token = token->next;
+  return tok;
+}
+
 bool at_eof() { return token->kind == TK_EOF; }
 
-// ノード作成
-Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
+Node *new_node(NodeKind kind) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
+  return node;
+}
+
+// ノード作成
+Node *new_binary(NodeKind kind, Node *lhs, Node *rhs) {
+  Node *node = new_node(kind);
   node->lhs = lhs;
   node->rhs = rhs;
   return node;
@@ -92,8 +108,7 @@ Node *new_node(NodeKind kind, Node *lhs, Node *rhs) {
 
 // 数値のノード作成
 Node *new_node_num(int val) {
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_NUM;
+  Node *node = new_node(ND_NUM);
   node->val = val;
   return node;
 }
@@ -166,10 +181,7 @@ Function *program() {
 
 // func-def = ident func-def-args "{" stmt* "}"
 Function *function() {
-  Token *tok = consume_by_kind(TK_IDENT);
-  if (!tok) {
-    error_at(token->str, "ident ではありません");
-  }
+  Token *tok = expect_ident();
 
   Function *func = calloc(1, sizeof(Function));
   cur_func = func;
@@ -191,8 +203,7 @@ Function *function() {
   }
 
   // ND_BLOCK とすることで、if や for と同じコード生成の処理を通せる
-  Node *body = calloc(1, sizeof(Node));
-  body->kind = ND_BLOCK;
+  Node *body = new_node(ND_BLOCK);
   body->body = head.next;
 
   func->body = body;
@@ -202,13 +213,8 @@ Function *function() {
 
 // 関数定義の引数
 Node *arg() {
-  Token *tok = consume_by_kind(TK_IDENT);
-  if (!tok) {
-    error_at(token->str, "ident ではありません");
-  }
-
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_ARG;
+  Token *tok = expect_ident();
+  Node *node = new_node(ND_ARG);
   // 引数をローカル変数として領域を確保する
   //   プロローグでそのローカル変数にレジスタから値をコピーすることでローカル変数と同じように扱える
   node->offset = lvar_offset(tok);
@@ -259,16 +265,14 @@ Node *stmt() {
       cur = cur->next;
     }
 
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_BLOCK;
+    node = new_node(ND_BLOCK);
     node->body = head.next;
 
     return node;
   }
 
   if (consume_by_kind(TK_IF)) {
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_IF;
+    node = new_node(ND_IF);
     expect("(");
     node->cond = expr();
     expect(")");
@@ -281,8 +285,7 @@ Node *stmt() {
   }
 
   if (consume_by_kind(TK_WHILE)) {
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_WHILE;
+    node = new_node(ND_WHILE);
     expect("(");
     node->cond = expr();
     expect(")");
@@ -291,8 +294,7 @@ Node *stmt() {
   }
 
   if (consume_by_kind(TK_FOR)) {
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_FOR;
+    node = new_node(ND_FOR);
     expect("(");
 
     if (!consume(";")) {
@@ -315,15 +317,13 @@ Node *stmt() {
   }
 
   if (consume_by_kind(TK_RETURN)) {
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_RETURN;
+    node = new_node(ND_RETURN);
     node->lhs = expr();
     // エピローグのラベルにジャンプするときに使用する
     node->funcname = cur_func->funcname;
   } else {
     // 式文
-    node = calloc(1, sizeof(Node));
-    node->kind = ND_EXPR_STMT;
+    node = new_node(ND_EXPR_STMT);
     node->lhs = expr();
   }
   expect(";");
@@ -338,7 +338,7 @@ Node *assign() {
   Node *node = equality();
 
   if (consume("=")) {
-    node = new_node(ND_ASSIGN, node, assign());
+    node = new_binary(ND_ASSIGN, node, assign());
   }
 
   return node;
@@ -350,9 +350,9 @@ Node *equality() {
 
   for (;;) {
     if (consume("==")) {
-      node = new_node(ND_EQ, node, relational());
+      node = new_binary(ND_EQ, node, relational());
     } else if (consume("!=")) {
-      node = new_node(ND_NE, node, relational());
+      node = new_binary(ND_NE, node, relational());
     } else {
       return node;
     }
@@ -365,15 +365,15 @@ Node *relational() {
 
   for (;;) {
     if (consume("<")) {
-      node = new_node(ND_LT, node, add());
+      node = new_binary(ND_LT, node, add());
     } else if (consume("<=")) {
-      node = new_node(ND_LE, node, add());
+      node = new_binary(ND_LE, node, add());
     } else if (consume(">")) {
       // この時点で反転しておく
-      node = new_node(ND_LT, add(), node);
+      node = new_binary(ND_LT, add(), node);
     } else if (consume(">=")) {
       // この時点で反転しておく
-      node = new_node(ND_LE, add(), node);
+      node = new_binary(ND_LE, add(), node);
     } else {
       return node;
     }
@@ -386,9 +386,9 @@ Node *add() {
 
   for (;;) {
     if (consume("+")) {
-      node = new_node(ND_ADD, node, mul());
+      node = new_binary(ND_ADD, node, mul());
     } else if (consume("-")) {
-      node = new_node(ND_SUB, node, mul());
+      node = new_binary(ND_SUB, node, mul());
     } else {
       return node;
     }
@@ -401,9 +401,9 @@ Node *mul() {
 
   for (;;) {
     if (consume("*")) {
-      node = new_node(ND_MUL, node, unary());
+      node = new_binary(ND_MUL, node, unary());
     } else if (consume("/")) {
-      node = new_node(ND_DIV, node, unary());
+      node = new_binary(ND_DIV, node, unary());
     } else {
       return node;
     }
@@ -416,7 +416,7 @@ Node *unary() {
     return primary();
   }
   if (consume("-")) {
-    return new_node(ND_SUB, new_node_num(0), primary());
+    return new_binary(ND_SUB, new_node_num(0), primary());
   }
 
   // 通常の数値の場合は、通常通りに処理する
@@ -426,8 +426,7 @@ Node *unary() {
 // 変数
 Node *lvar(Token *tok) {
   // 識別子なら、LVAR (ローカル変数) として処理する
-  Node *node = calloc(1, sizeof(Node));
-  node->kind = ND_LVAR;
+  Node *node = new_node(ND_LVAR);
   node->offset = lvar_offset(tok);
   return node;
 }
@@ -465,8 +464,7 @@ Node *primary() {
   if (tok) {
     if (consume("(")) {
       // 関数呼び出し
-      Node *node = calloc(1, sizeof(Node));
-      node->kind = ND_CALL;
+      Node *node = new_node(ND_CALL);
       node->funcname = strndup(tok->str, tok->len);
       node->args = func_args();
 
