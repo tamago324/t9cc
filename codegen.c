@@ -16,7 +16,7 @@ void error(char *fmt, ...) {
 }
 
 // 左辺の変数のアドレスを算出して、スタックに積む
-void gen_lval(Node *node) {
+void gen_addr(Node *node) {
   if (node->kind != ND_VAR) {
     error("代入の左辺値が変数ではありません。");
   }
@@ -24,6 +24,23 @@ void gen_lval(Node *node) {
   printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n", node->var->offset);
   printf("  push rax\n");
+}
+
+// スタックの先頭のアドレスから値を取得し、スタックに積む
+void load() {
+  printf("  pop rax\n");
+  printf("  mov rax, [rax]\n");
+  printf("  push rax\n");
+}
+
+// 値、アドレスの順でスタックから読み取り、アドレスに値をセットする
+void store() {
+  printf("  pop rdi\n");
+  printf("  pop rax\n");
+  printf("  mov [rax], rdi\n");
+  // 右辺の値を push しておくのはなんでだろうか？
+  //  -> C言語の代入演算子は、右辺の値を返す式であるため。
+  printf("  push rdi\n");
 }
 
 void gen(Node *node) {
@@ -154,24 +171,17 @@ void gen(Node *node) {
 
   case ND_VAR:
     // 変数のアドレスを計算してスタックに積む
-    gen_lval(node);
+    gen_addr(node);
     // スタックの先頭にある変数のアドレスから値を読み取る
-    printf("  pop rax\n");
-    printf("  mov rax, [rax]\n");
-    printf("  push rax\n");
+    load();
     return;
   case ND_ASSIGN:
     // 左辺の変数のアドレスを計算してスタックに積む
-    gen_lval(node->lhs);
+    gen_addr(node->lhs);
     // 右辺の式を評価して、スタックに積む
     gen(node->rhs);
     // 左辺の値を右辺の変数に代入する
-    printf("  pop rdi\n");
-    printf("  pop rax\n");
-    printf("  mov [rax], rdi\n");
-    // 右辺の値を push しておくのはなんでだろうか？
-    //  -> C言語の代入演算子は、右辺の値を返す式であるため。
-    printf("  push rdi\n");
+    store();
     return;
   case ND_ADD:
   case ND_SUB:
