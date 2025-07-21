@@ -78,9 +78,7 @@ struct Node {
   Node *next;
 
   // 関数呼び出しのための属性
-  Node *args; // 引数
-
-  // return のための属性
+  Node *args;     // 引数
   char *funcname; // return に対応する関数名
 
   // 変数のための属性

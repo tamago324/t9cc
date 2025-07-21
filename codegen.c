@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+char *funcname;
+
 int labelSeq = 0;
 
 // エラーを報告するための関数
@@ -47,8 +49,8 @@ void gen(Node *node) {
   if (node->kind == ND_RETURN) {
     gen(node->lhs);
     printf("  pop rax\n");
-    // 関数のエピローグにジャンプする
-    printf("  jmp Lreturn.%s\n", node->funcname);
+    // 現在の関数のエピローグにジャンプする
+    printf("  jmp Lreturn.%s\n", funcname);
     return;
   }
 
@@ -264,6 +266,7 @@ void codegen(Function *prog) {
   printf(".intel_syntax noprefix\n");
 
   for (Function *fn = prog; fn; fn = fn->next) {
+    funcname = fn->funcname;
 
     printf(".global %s\n", fn->funcname);
     printf("%s:\n", fn->funcname);

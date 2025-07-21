@@ -29,8 +29,8 @@
   func-args  = "(" (expr ("," expr)*)? ")"
  */
 
-// 現在の関数 (return するときのラベル名に使用する)
-Function *cur_func;
+// 現在の関数のローカル変数
+VarList *locals;
 
 // 現在のトークンが期待している記号のときは、トークンを消費して
 // true を返す。
@@ -115,7 +115,7 @@ Node *new_node_num(int val) {
 
 // 変数を名前で検索する。見つからなかったら NULL を返す
 Var *find_lvar(Token *tok) {
-  for (VarList *vl = cur_func->locals; vl; vl = vl->next) {
+  for (VarList *vl = locals; vl; vl = vl->next) {
     Var *var = vl->var;
     // memcmp は、結果が同じ場合、0 となるため、 !memcmp とする必要がある
     if (strlen(var->name) == tok->len &&
@@ -156,8 +156,8 @@ Function *program() {
 // function   = ident "(" params? ")" "{" stmt* "}"
 // params     = ident ("," ident)*
 Function *function() {
+  locals = NULL;
   Function *func = calloc(1, sizeof(Function));
-  cur_func = func;
   func->funcname = expect_ident();
   func->params = read_func_params();
 
@@ -179,6 +179,7 @@ Function *function() {
   body->body = head.next;
 
   func->body = body;
+  func->locals = locals;
 
   return func;
 }
@@ -192,8 +193,8 @@ Var *push_var(char *name) {
   // ローカル変数のリストに追加する
   VarList *vl = calloc(1, sizeof(VarList));
   vl->var = var;
-  vl->next = cur_func->locals;
-  cur_func->locals = vl;
+  vl->next = locals;
+  locals = vl;
 
   // 追加した変数を返す
   return var;
@@ -300,8 +301,6 @@ Node *stmt() {
   if (consume_by_kind(TK_RETURN)) {
     node = new_node(ND_RETURN);
     node->lhs = expr();
-    // エピローグのラベルにジャンプするときに使用する
-    node->funcname = cur_func->funcname;
   } else {
     // 式文
     node = new_node(ND_EXPR_STMT);
