@@ -16,16 +16,11 @@ int main(int argc, char **argv) {
   // トークないずの結果は code に保存されるため、ここでは保持しない
   user_input = argv[1];
   tokenize();
-  program();
+  Function *prog = program();
 
-  // アセンブリの前半部分を出力
-  printf(".intel_syntax noprefix\n");
-  printf(".global main\n");
+  // TODO: スタックのサイズを計算する
 
-  // 先頭の式から順にコード生成
-  for (int i = 0; code[i]; i++) {
-    gen(code[i]);
-  }
+  codegen(prog);
 
   // 最後の式の結果が RAX に残っているため、それが返り値になる
   return 0;

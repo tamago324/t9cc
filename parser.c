@@ -7,8 +7,8 @@
 #include <string.h>
 
 /**
-  program    = func-def func-def*
-  func-def   = ident func-def-args "{" stmt* "}"
+  program    = function*
+  function   = ident func-def-args "{" stmt* "}"
   func-def-args = "(" (ident ("," ident)*)? ")"
   stmt       = expr ";"
              | "{" stmt* "}"
@@ -29,11 +29,8 @@
   func-args  = "(" (expr ("," expr)*)? ")"
  */
 
-// 複数文に対応するためのノードを格納する (定義)
-Node *code[100];
-
 // 現在の関数 (return するときのラベル名に使用する)
-Node *cur_func;
+Function *cur_func;
 
 // 現在のトークンが期待している記号のときは、トークンを消費して
 // true を返す。
@@ -141,7 +138,7 @@ int lvar_offset(Token *tok) {
 }
 
 // 入れ子になるため、先に定義しておく
-Node *func_def();
+Function *function();
 Node *func_def_args();
 Node *stmt();
 Node *expr();
@@ -154,30 +151,30 @@ Node *unary();
 Node *primary();
 
 // program    = func-def func-def*
-void program() {
-  int i = 0;
-  code[i++] = func_def();
+Function *program() {
+  Function head;
+  head.next = NULL;
+  Function *cur = &head;
 
   while (!at_eof()) {
-    code[i++] = func_def();
+    cur->next = function();
+    cur = cur->next;
   }
 
-  // 最後は NULL を入れておく
-  code[i] = NULL;
+  return head.next;
 }
 
 // func-def = ident func-def-args "{" stmt* "}"
-Node *func_def() {
+Function *function() {
   Token *tok = consume_by_kind(TK_IDENT);
   if (!tok) {
     error_at(token->str, "ident ではありません");
   }
 
-  Node *node = calloc(1, sizeof(Node));
-  cur_func = node;
-  node->kind = ND_FUNCDEF;
-  node->funcname = strndup(tok->str, tok->len);
-  node->args = func_def_args();
+  Function *func = calloc(1, sizeof(Function));
+  cur_func = func;
+  func->funcname = strndup(tok->str, tok->len);
+  func->args = func_def_args();
 
   // block
   // TODO: stmt の部分と合わせて、関数にしておきたい
@@ -198,9 +195,9 @@ Node *func_def() {
   body->kind = ND_BLOCK;
   body->body = head.next;
 
-  node->body = body;
+  func->body = body;
 
-  return node;
+  return func;
 }
 
 // 関数定義の引数

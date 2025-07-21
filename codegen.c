@@ -15,15 +15,6 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
-// ローカル変数の数
-int lvar_len(Node *node) {
-  int i = 0;
-  for (LVar *var = node->locals; var; var = var->next) {
-    i++;
-  }
-  return i;
-}
-
 // 左辺の変数のアドレスを算出して、スタックに積む
 void gen_lval(Node *node) {
   if (node->kind != ND_LVAR) {
@@ -49,47 +40,6 @@ void gen(Node *node) {
   case ND_EXPR_STMT:
     gen(node->lhs);
     printf("  add rsp, 8\n"); // 式文は、結果 (スタックの先頭) を捨てる
-    return;
-
-  case ND_FUNCDEF:
-    printf("%s:\n", node->funcname);
-
-    // プロローグ
-    printf("  push rbp\n");
-    printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", lvar_len(node) * 8);
-
-    // 引数レジスタの値をローカル変数の値としてセットする
-    int argsLen = 0;
-    for (Node *n = node->args; n; n = n->next) {
-      printf("  mov rax, rbp\n");
-      printf("  sub rax, %d\n", n->offset);
-
-      argsLen += 1;
-
-      if (argsLen == 6)
-        printf("  mov [rax], r9\n");
-      if (argsLen == 5)
-        printf("  mov [rax], r8\n");
-      if (argsLen == 4)
-        printf("  mov [rax], rcx\n");
-      if (argsLen == 3)
-        printf("  mov [rax], rdx\n");
-      if (argsLen == 2)
-        printf("  mov [rax], rsi\n");
-      if (argsLen == 1)
-        printf("  mov [rax], rdi\n");
-    }
-
-    gen(node->body);
-
-    // エピローグ
-    printf("Lepilogue%s:\n", node->funcname);
-    printf("  mov rsp, rbp\n");
-    printf("  pop rbp\n");
-    // ret でリターンアドレスにジャンプできる
-    printf("  ret\n");
-
     return;
 
   case ND_BLOCK:
@@ -291,7 +241,6 @@ void gen(Node *node) {
   case ND_FOR:
   case ND_BLOCK:
   case ND_CALL:
-  case ND_FUNCDEF:
   case ND_ARG:
   case ND_EXPR_STMT:
     break;
@@ -299,4 +248,62 @@ void gen(Node *node) {
 
   // 計算結果を push する必要がある (スタックに積みなおす)
   printf("  push rax\n");
+}
+
+// ローカル変数の数
+// TODO: fn->stack_size にする。
+int lvar_len(Function *func) {
+  int i = 0;
+  for (LVar *var = func->locals; var; var = var->next) {
+    i++;
+  }
+  return i;
+}
+
+void codegen(Function *prog) {
+
+  // アセンブリの前半部分を出力
+  printf(".intel_syntax noprefix\n");
+
+  for (Function *fn = prog; fn; fn = fn->next) {
+
+    printf(".global main\n");
+    printf("%s:\n", fn->funcname);
+
+    // プロローグ
+    printf("  push rbp\n");
+    printf("  mov rbp, rsp\n");
+    printf("  sub rsp, %d\n", lvar_len(fn) * 8);
+
+    // 引数レジスタの値をローカル変数の値としてセットする
+    int argsLen = 0;
+    for (Node *n = fn->args; n; n = n->next) {
+      printf("  mov rax, rbp\n");
+      printf("  sub rax, %d\n", n->offset);
+
+      argsLen += 1;
+
+      if (argsLen == 6)
+        printf("  mov [rax], r9\n");
+      if (argsLen == 5)
+        printf("  mov [rax], r8\n");
+      if (argsLen == 4)
+        printf("  mov [rax], rcx\n");
+      if (argsLen == 3)
+        printf("  mov [rax], rdx\n");
+      if (argsLen == 2)
+        printf("  mov [rax], rsi\n");
+      if (argsLen == 1)
+        printf("  mov [rax], rdi\n");
+    }
+
+    gen(fn->body);
+
+    // エピローグ
+    printf("Lepilogue%s:\n", fn->funcname);
+    printf("  mov rsp, rbp\n");
+    printf("  pop rbp\n");
+    // ret でリターンアドレスにジャンプできる
+    printf("  ret\n");
+  }
 }

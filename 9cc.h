@@ -23,24 +23,24 @@ struct Token {
 
 // 抽象構文木のノードの種類
 typedef enum {
-  ND_ADD,       // +
-  ND_SUB,       // -
-  ND_MUL,       // *
-  ND_DIV,       // /
-  ND_ASSIGN,    // =
-  ND_LVAR,      // ローカル変数
-  ND_EQ,        // ==
-  ND_NE,        // !=
-  ND_LT,        // < (Less Than)
-  ND_LE,        // <= (Less than or Equal)
-  ND_NUM,       // 整数
-  ND_RETURN,    // return
-  ND_IF,        // if
-  ND_WHILE,     // while
-  ND_FOR,       // for
-  ND_BLOCK,     // block
-  ND_CALL,      // 関数呼び出し
-  ND_FUNCDEF,   // 関数定義
+  ND_ADD,    // +
+  ND_SUB,    // -
+  ND_MUL,    // *
+  ND_DIV,    // /
+  ND_ASSIGN, // =
+  ND_LVAR,   // ローカル変数
+  ND_EQ,     // ==
+  ND_NE,     // !=
+  ND_LT,     // < (Less Than)
+  ND_LE,     // <= (Less than or Equal)
+  ND_NUM,    // 整数
+  ND_RETURN, // return
+  ND_IF,     // if
+  ND_WHILE,  // while
+  ND_FOR,    // for
+  ND_BLOCK,  // block
+  ND_CALL,   // 関数呼び出し
+  // TODO: これを削除する (VarList を使う)
   ND_ARG,       // 関数定義の引数
   ND_EXPR_STMT, // 式文
 } NodeKind;
@@ -75,13 +75,24 @@ struct Node {
   Node *next;
 
   // 関数呼び出しのための属性
-  char *funcname; // 関数名
-  Node *args;     // 引数のリスト (連結リストで複数文を表現)
-  LVar *locals;   // 関数内のローカル変数
+  Node *args; // 引数
+
+  // return のための属性
+  char *funcname; // return に対応する関数名
 
   // 関数定義の引数のための属性
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
+};
+
+typedef struct Function Function;
+struct Function {
+  Function *next;
+  char *funcname; // 関数名
+  Node *args;     // 引数のリスト (連結リストで複数文を表現)
+  LVar *locals;   // 関数内のローカル変数
+  Node *body;     // ブロック内の文のリスト (連結リストで複数文を表現)
+  int stack_size; // 関数のスタックのサイズ
 };
 
 // 入力プログラム (宣言)
@@ -90,17 +101,21 @@ extern char *user_input;
 // 現在のトークン
 extern Token *token;
 
-// コード全体 (宣言)
-extern Node *code[100];
-
 // トークナイズ
 void tokenize();
 
 // パース
-void program();
+Function *program();
 
 // コード生成
 void gen(Node *node);
 
 // エラーの出力
 void error_at(char *loc, char *fmt, ...);
+
+/**
+ * codegen.c
+ */
+
+// コード生成
+void codegen(Function *prog);
