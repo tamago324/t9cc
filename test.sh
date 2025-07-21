@@ -118,6 +118,10 @@ assert 3 'main(){return fib(4);} fib(n) { if (n <= 1) return n; return fib(n-1) 
 assert 5 'main(){return fib(5);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
 assert 8 'main(){return fib(6);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
 
+# step16
+assert 3 'main() {x=3; y=&x; return *y;}'
+assert 9 'main() {x=3; y=&x; return 6 + *y;}'
+
 echo OK
 
 

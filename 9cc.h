@@ -41,6 +41,8 @@ typedef enum {
   ND_BLOCK,     // block
   ND_CALL,      // 関数呼び出し
   ND_EXPR_STMT, // 式文
+  ND_ADDR,      // アドレス取得 (&)
+  ND_DEREF,     // アドレス参照 (*)
 } NodeKind;
 
 // ローカル変数の型

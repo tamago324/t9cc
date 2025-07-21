@@ -23,6 +23,8 @@
   add        = mul ("+" mul | "-" mul)*
   mul        = unary ("*" unary | "/" unary)*
   unary      = ("+" | "-")? primary
+             | "*" unary
+             | "&" unary
   primary    = num
              | ident func-args?
              | "(" expr ")"
@@ -95,6 +97,12 @@ bool at_eof() { return token->kind == TK_EOF; }
 Node *new_node(NodeKind kind) {
   Node *node = calloc(1, sizeof(Node));
   node->kind = kind;
+  return node;
+}
+
+Node *new_unary(NodeKind kind, Node *lhs) {
+  Node *node = new_node(kind);
+  node->lhs = lhs;
   return node;
 }
 
@@ -391,7 +399,17 @@ Node *mul() {
 }
 
 // unary = ("+" | "-")? primary
+//       | "*" unary
+//       | "&" unary
 Node *unary() {
+  if (consume("*")) {
+    return new_unary(ND_DEREF, unary());
+  }
+
+  if (consume("&")) {
+    return new_unary(ND_ADDR, unary());
+  }
+
   if (consume("+")) {
     return primary();
   }

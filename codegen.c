@@ -185,6 +185,18 @@ void gen(Node *node) {
     // 左辺の値を右辺の変数に代入する
     store();
     return;
+
+  case ND_ADDR:
+    // アドレス取得 (&)
+    gen_addr(node->lhs);
+    return;
+
+  case ND_DEREF:
+    // アドレス参照 (*)
+    gen(node->lhs); // 変数の値を読み込む (ND_VARでコード生成される想定)
+    load();         // さらにその値のアドレスから読み込む
+    return;
+
   case ND_ADD:
   case ND_SUB:
   case ND_MUL:
@@ -253,6 +265,8 @@ void gen(Node *node) {
   case ND_BLOCK:
   case ND_CALL:
   case ND_EXPR_STMT:
+  case ND_ADDR:
+  case ND_DEREF:
     break;
   }
 
