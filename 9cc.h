@@ -95,7 +95,7 @@ typedef struct Function Function;
 struct Function {
   Function *next;
   char *funcname;  // 関数名
-  VarList *args;   // 引数のリスト
+  VarList *params; // 引数のリスト
   VarList *locals; // 関数内のローカル変数
   Node *body;      // ブロック内の文のリスト (連結リストで複数文を表現)
   int stack_size;  // 関数のスタックのサイズ

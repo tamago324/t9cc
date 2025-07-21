@@ -275,7 +275,7 @@ void codegen(Function *prog) {
 
     // 引数レジスタの値をローカル変数の値としてセットする
     int argsLen = 0;
-    for (VarList *vl = fn->args; vl; vl = vl->next) {
+    for (VarList *vl = fn->params; vl; vl = vl->next) {
       printf("  mov rax, rbp\n");
       printf("  sub rax, %d\n", vl->var->offset);
 

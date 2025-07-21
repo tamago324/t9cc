@@ -8,8 +8,8 @@
 
 /**
   program    = function*
-  function   = ident func-def-args "{" stmt* "}"
-  func-def-args = "(" (ident ("," ident)*)? ")"
+  function   = ident "(" params? ")" "{" stmt* "}"
+  params     = ident ("," ident)*
   stmt       = expr ";"
              | "{" stmt* "}"
              | "if" "(" expr ")" stmt ("else" stmt)?
@@ -128,7 +128,7 @@ Var *find_lvar(Token *tok) {
 
 // 入れ子になるため、先に定義しておく
 Function *function();
-VarList *func_def_args();
+VarList *read_func_params();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -153,15 +153,15 @@ Function *program() {
   return head.next;
 }
 
-// func-def = ident func-def-args "{" stmt* "}"
+// function   = ident "(" params? ")" "{" stmt* "}"
+// params     = ident ("," ident)*
 Function *function() {
   Function *func = calloc(1, sizeof(Function));
   cur_func = func;
   func->funcname = expect_ident();
-  func->args = func_def_args();
+  func->params = read_func_params();
 
   // block
-  // TODO: stmt の部分と合わせて、関数にしておきたい
   expect("{");
 
   Node head;
@@ -199,8 +199,7 @@ Var *push_var(char *name) {
   return var;
 }
 
-// func-def-args = "(" (ident ("," ident)*)? ")"
-VarList *func_def_args() {
+VarList *read_func_params() {
   // 今は引数無しだけにしておく
   expect("(");
   if (consume(")")) {
