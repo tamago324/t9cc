@@ -81,13 +81,13 @@ int expect_number() {
 
 // 現在のトークンが識別子の場合、そのトークンを消費して、次に進む
 // それ以外の場合にはエラーを報告する
-Token *expect_ident() {
+char *expect_ident() {
   if (token->kind != TK_IDENT)
     error_at(token->str, "ident ではありません");
 
-  Token *tok = token;
+  char *name = strndup(token->str, token->len);
   token = token->next;
-  return tok;
+  return name;
 }
 
 bool at_eof() { return token->kind == TK_EOF; }
@@ -114,47 +114,21 @@ Node *new_node_num(int val) {
 }
 
 // 変数を名前で検索する。見つからなかったら NULL を返す
-LVar *find_lvar(Token *tok) {
-  for (LVar *var = cur_func->locals; var; var = var->next) {
+Var *find_lvar(Token *tok) {
+  for (VarList *vl = cur_func->locals; vl; vl = vl->next) {
+    Var *var = vl->var;
     // memcmp は、結果が同じ場合、0 となるため、 !memcmp とする必要がある
-    if (var->len == tok->len && !memcmp(var->name, tok->str, var->len)) {
+    if (strlen(var->name) == tok->len &&
+        !memcmp(tok->str, var->name, tok->len)) {
       return var;
     }
   }
   return NULL;
 }
 
-// 変数の領域のオフセットを取得する
-// 既に宣言されている場合は、その変数のオフセット、まだの場合は領域を確保する
-int lvar_offset(Token *tok) {
-  LVar *lvar = find_lvar(tok);
-  if (lvar) {
-    // すでに宣言されているものは、その変数のオフセットを使う
-    return lvar->offset;
-  } else {
-    // 新しい変数の場合は、新しい領域のオフセットを計算する
-    lvar = calloc(1, sizeof(LVar));
-    lvar->next = cur_func->locals;
-    lvar->name = tok->str;
-    lvar->len = tok->len;
-    // ベースポインタからのオフセット
-    //   1つ前の変数からのオフセットで新しいオフセットが計算できる
-    if (cur_func->locals) {
-      lvar->offset = cur_func->locals->offset + 8;
-    } else {
-      // オフセットを8にしておくことで、関数の引数の領域を確保できる
-      lvar->offset = 8;
-    }
-    // 先頭の更新
-    cur_func->locals = lvar;
-
-    return lvar->offset; // これがコード生成のときに使用するもの
-  }
-}
-
 // 入れ子になるため、先に定義しておく
 Function *function();
-Node *func_def_args();
+VarList *func_def_args();
 Node *stmt();
 Node *expr();
 Node *assign();
@@ -181,11 +155,9 @@ Function *program() {
 
 // func-def = ident func-def-args "{" stmt* "}"
 Function *function() {
-  Token *tok = expect_ident();
-
   Function *func = calloc(1, sizeof(Function));
   cur_func = func;
-  func->funcname = strndup(tok->str, tok->len);
+  func->funcname = expect_ident();
   func->args = func_def_args();
 
   // block
@@ -211,18 +183,24 @@ Function *function() {
   return func;
 }
 
-// 関数定義の引数
-Node *arg() {
-  Token *tok = expect_ident();
-  Node *node = new_node(ND_ARG);
-  // 引数をローカル変数として領域を確保する
-  //   プロローグでそのローカル変数にレジスタから値をコピーすることでローカル変数と同じように扱える
-  node->offset = lvar_offset(tok);
-  return node;
+// ローカル変数として定義する (locals にも追加する)
+Var *push_var(char *name) {
+  // 追加する変数
+  Var *var = calloc(1, sizeof(Var));
+  var->name = name;
+
+  // ローカル変数のリストに追加する
+  VarList *vl = calloc(1, sizeof(VarList));
+  vl->var = var;
+  vl->next = cur_func->locals;
+  cur_func->locals = vl;
+
+  // 追加した変数を返す
+  return var;
 }
 
 // func-def-args = "(" (ident ("," ident)*)? ")"
-Node *func_def_args() {
+VarList *func_def_args() {
   // 今は引数無しだけにしておく
   expect("(");
   if (consume(")")) {
@@ -231,16 +209,20 @@ Node *func_def_args() {
   }
 
   // 引数あり
-  Node *head = arg();
-  Node *cur = head;
+  VarList head;
+  head.next = calloc(1, sizeof(VarList));
+  head.next->var = push_var(expect_ident());
+
+  VarList *cur = head.next;
 
   while (consume(",")) {
-    cur->next = arg();
+    cur->next = calloc(1, sizeof(VarList));
+    cur->next->var = push_var(expect_ident());
     cur = cur->next;
   }
   expect(")");
 
-  return head;
+  return head.next;
 }
 
 /**
@@ -424,10 +406,10 @@ Node *unary() {
 }
 
 // 変数
-Node *lvar(Token *tok) {
-  // 識別子なら、LVAR (ローカル変数) として処理する
-  Node *node = new_node(ND_LVAR);
-  node->offset = lvar_offset(tok);
+Node *new_var(Var *var) {
+  // 識別子なら、var として処理する
+  Node *node = new_node(ND_VAR);
+  node->var = var;
   return node;
 }
 
@@ -470,7 +452,12 @@ Node *primary() {
 
       return node;
     } else {
-      return lvar(tok);
+      // 変数
+      Var *var = find_lvar(tok);
+      if (!var) {
+        var = push_var(strndup(tok->str, tok->len));
+      }
+      return new_var(var);
     }
   }
 

@@ -23,35 +23,38 @@ struct Token {
 
 // 抽象構文木のノードの種類
 typedef enum {
-  ND_ADD,    // +
-  ND_SUB,    // -
-  ND_MUL,    // *
-  ND_DIV,    // /
-  ND_ASSIGN, // =
-  ND_LVAR,   // ローカル変数
-  ND_EQ,     // ==
-  ND_NE,     // !=
-  ND_LT,     // < (Less Than)
-  ND_LE,     // <= (Less than or Equal)
-  ND_NUM,    // 整数
-  ND_RETURN, // return
-  ND_IF,     // if
-  ND_WHILE,  // while
-  ND_FOR,    // for
-  ND_BLOCK,  // block
-  ND_CALL,   // 関数呼び出し
-  // TODO: これを削除する (VarList を使う)
-  ND_ARG,       // 関数定義の引数
+  ND_ADD,       // +
+  ND_SUB,       // -
+  ND_MUL,       // *
+  ND_DIV,       // /
+  ND_ASSIGN,    // =
+  ND_VAR,       // ローカル変数
+  ND_EQ,        // ==
+  ND_NE,        // !=
+  ND_LT,        // < (Less Than)
+  ND_LE,        // <= (Less than or Equal)
+  ND_NUM,       // 整数
+  ND_RETURN,    // return
+  ND_IF,        // if
+  ND_WHILE,     // while
+  ND_FOR,       // for
+  ND_BLOCK,     // block
+  ND_CALL,      // 関数呼び出し
   ND_EXPR_STMT, // 式文
 } NodeKind;
 
-// ローカル変数の型 (連結リストで全変数を表現)
-typedef struct LVar LVar;
-struct LVar {
-  LVar *next; // 次の変数 or NULL
+// ローカル変数の型
+typedef struct Var Var;
+struct Var {
   char *name; // 変数名
-  int len;    // 名前の長さ
   int offset; // RBP からのオフセット (これがスタック領域の割り当てと同等)
+};
+
+// 変数のリスト (連結リストで表現)
+typedef struct VarList VarList;
+struct VarList {
+  VarList *next; // 次の変数 or NULL
+  Var *var;
 };
 
 typedef struct Node Node;
@@ -80,6 +83,9 @@ struct Node {
   // return のための属性
   char *funcname; // return に対応する関数名
 
+  // 変数のための属性
+  Var *var;
+
   // 関数定義の引数のための属性
   int val;    // kind が ND_NUM の場合、数値が入る
   int offset; // kind が ND_LVAR の場合、ベースポインタからのオフセットが入る
@@ -88,11 +94,11 @@ struct Node {
 typedef struct Function Function;
 struct Function {
   Function *next;
-  char *funcname; // 関数名
-  Node *args;     // 引数のリスト (連結リストで複数文を表現)
-  LVar *locals;   // 関数内のローカル変数
-  Node *body;     // ブロック内の文のリスト (連結リストで複数文を表現)
-  int stack_size; // 関数のスタックのサイズ
+  char *funcname;  // 関数名
+  VarList *args;   // 引数のリスト
+  VarList *locals; // 関数内のローカル変数
+  Node *body;      // ブロック内の文のリスト (連結リストで複数文を表現)
+  int stack_size;  // 関数のスタックのサイズ
 };
 
 // 入力プログラム (宣言)

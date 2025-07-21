@@ -8,7 +8,7 @@ assert() {
   # 入力を渡して、アセンブリに変換
   ./9cc "$input" > tmp.s
   # 実行ファイル作成 (+テスト関数が書かれたオブジェクトファイルをリンク)
-  cc -o tmp tmp.s test_func.o
+  cc -o tmp tmp.s
   
   # == 実行 ==
   ./tmp
@@ -96,16 +96,17 @@ assert 10 'main() {i=0; j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;}'
 assert 10 'main() {{return 10;}}'
 
 # step14
-assert 10 'main(){foo(); return 10;}'
+# assert 10 'main(){foo(); return 10;}'
 
-assert 3 'main(){bar(1, 2); return 3;}'
-assert 21 'main(){huga(1, 2, 3, 4, 5, 6); return 21;}'
+# assert 3 'main(){bar(1, 2); return 3;}'
+# assert 21 'main(){huga(1, 2, 3, 4, 5, 6); return 21;}'
 
 # step15
 assert 1 'main() {return 1;}'
 assert 7 'main() {return one()+two()*3;} one(){return 1;} two(){return 2; 100;}'
 
 assert 1 'main(){ return huga(1);} huga(a) { a; }'
+assert 3 'main(){ return huga(1, 2);} huga(a, b) { a+b; }'
 assert 21 'main(){ return huga(1, 2, 3, 4, 5, 6);} huga(a, b, c, d, e, f) { a+b+c+d+e+f; }'
 
 # フィボナッチ数列のテスト (再帰を使う)

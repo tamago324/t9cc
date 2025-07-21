@@ -17,12 +17,12 @@ void error(char *fmt, ...) {
 
 // 左辺の変数のアドレスを算出して、スタックに積む
 void gen_lval(Node *node) {
-  if (node->kind != ND_LVAR) {
+  if (node->kind != ND_VAR) {
     error("代入の左辺値が変数ではありません。");
   }
 
   printf("  mov rax, rbp\n");
-  printf("  sub rax, %d\n", node->offset);
+  printf("  sub rax, %d\n", node->var->offset);
   printf("  push rax\n");
 }
 
@@ -152,7 +152,7 @@ void gen(Node *node) {
     return;
   }
 
-  case ND_LVAR:
+  case ND_VAR:
     // 変数のアドレスを計算してスタックに積む
     gen_lval(node);
     // スタックの先頭にある変数のアドレスから値を読み取る
@@ -182,7 +182,6 @@ void gen(Node *node) {
   case ND_LT:
   case ND_LE:
   case ND_RETURN:
-  case ND_ARG:
     break;
   }
 
@@ -233,7 +232,7 @@ void gen(Node *node) {
     printf("  movzx rax, al\n");
     break;
   case ND_ASSIGN:
-  case ND_LVAR:
+  case ND_VAR:
   case ND_NUM:
   case ND_RETURN:
   case ND_IF:
@@ -241,7 +240,6 @@ void gen(Node *node) {
   case ND_FOR:
   case ND_BLOCK:
   case ND_CALL:
-  case ND_ARG:
   case ND_EXPR_STMT:
     break;
   }
@@ -257,7 +255,7 @@ void codegen(Function *prog) {
 
   for (Function *fn = prog; fn; fn = fn->next) {
 
-    printf(".global main\n");
+    printf(".global %s\n", fn->funcname);
     printf("%s:\n", fn->funcname);
 
     // プロローグ
@@ -267,9 +265,9 @@ void codegen(Function *prog) {
 
     // 引数レジスタの値をローカル変数の値としてセットする
     int argsLen = 0;
-    for (Node *n = fn->args; n; n = n->next) {
+    for (VarList *vl = fn->args; vl; vl = vl->next) {
       printf("  mov rax, rbp\n");
-      printf("  sub rax, %d\n", n->offset);
+      printf("  sub rax, %d\n", vl->var->offset);
 
       argsLen += 1;
 

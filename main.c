@@ -18,13 +18,14 @@ int main(int argc, char **argv) {
   tokenize();
   Function *prog = program();
 
-  // fn->stack_size を計算する
+  // 各ローカル変数のオフセットと、fn->stack_size を計算する
   for (Function *fn = prog; fn; fn = fn->next) {
-    int stack_size = 0;
-    for (LVar *var = fn->locals; var; var = var->next) {
-      stack_size += 8;
+    int offset = 0;
+    for (VarList *vl = fn->locals; vl; vl = vl->next) {
+      offset += 8;
+      vl->var->offset = offset;
     }
-    fn->stack_size = stack_size;
+    fn->stack_size = offset;
   }
 
   codegen(prog);
