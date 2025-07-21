@@ -18,7 +18,14 @@ int main(int argc, char **argv) {
   tokenize();
   Function *prog = program();
 
-  // TODO: スタックのサイズを計算する
+  // fn->stack_size を計算する
+  for (Function *fn = prog; fn; fn = fn->next) {
+    int stack_size = 0;
+    for (LVar *var = fn->locals; var; var = var->next) {
+      stack_size += 8;
+    }
+    fn->stack_size = stack_size;
+  }
 
   codegen(prog);
 

@@ -250,16 +250,6 @@ void gen(Node *node) {
   printf("  push rax\n");
 }
 
-// ローカル変数の数
-// TODO: fn->stack_size にする。
-int lvar_len(Function *func) {
-  int i = 0;
-  for (LVar *var = func->locals; var; var = var->next) {
-    i++;
-  }
-  return i;
-}
-
 void codegen(Function *prog) {
 
   // アセンブリの前半部分を出力
@@ -273,7 +263,7 @@ void codegen(Function *prog) {
     // プロローグ
     printf("  push rbp\n");
     printf("  mov rbp, rsp\n");
-    printf("  sub rsp, %d\n", lvar_len(fn) * 8);
+    printf("  sub rsp, %d\n", fn->stack_size);
 
     // 引数レジスタの値をローカル変数の値としてセットする
     int argsLen = 0;
