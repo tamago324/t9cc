@@ -31,7 +31,7 @@ void gen(Node *node) {
     gen(node->lhs);
     printf("  pop rax\n");
     // 関数のエピローグにジャンプする
-    printf("  jmp Lepilogue%s\n", node->funcname);
+    printf("  jmp Lreturn.%s\n", node->funcname);
     return;
   }
 
@@ -288,7 +288,7 @@ void codegen(Function *prog) {
     gen(fn->body);
 
     // エピローグ
-    printf("Lepilogue%s:\n", fn->funcname);
+    printf("Lreturn.%s:\n", fn->funcname);
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
     // ret でリターンアドレスにジャンプできる
