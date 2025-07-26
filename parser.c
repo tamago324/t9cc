@@ -16,6 +16,7 @@
              | "while" "(" expr ")" stmt
              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
              | "return" expr ";"
+             | "int" ident ";"
   expr       = assign
   assign	   = equality ("=" assign)?
   equality   = relational ("==" relational | "!=" relational)*
@@ -193,10 +194,11 @@ Function *function() {
 }
 
 // ローカル変数として定義する (locals にも追加する)
-Var *push_var(char *name) {
+Var *push_var(char *name, VarType type) {
   // 追加する変数
   Var *var = calloc(1, sizeof(Var));
   var->name = name;
+  var->type = type;
 
   // ローカル変数のリストに追加する
   VarList *vl = calloc(1, sizeof(VarList));
@@ -219,13 +221,13 @@ VarList *read_func_params() {
   // 引数あり
   VarList head;
   head.next = calloc(1, sizeof(VarList));
-  head.next->var = push_var(expect_ident());
+  head.next->var = push_var(expect_ident(), TYPE_INT);
 
   VarList *cur = head.next;
 
   while (consume(",")) {
     cur->next = calloc(1, sizeof(VarList));
-    cur->next->var = push_var(expect_ident());
+    cur->next->var = push_var(expect_ident(), TYPE_INT);
     cur = cur->next;
   }
   expect(")");
@@ -240,6 +242,7 @@ VarList *read_func_params() {
       | "while" "(" expr ")" stmt
       | "for" "(" expr? ";" expr? ";" expr? ")" stmt
       | "return" expr ";"
+      | "int" ident ";"
  */
 Node *stmt() {
   Node *node;
@@ -303,6 +306,15 @@ Node *stmt() {
     }
 
     node->then = stmt();
+    return node;
+  }
+
+  if (consume_by_kind(TK_INT)) {
+    node = new_node(ND_VAR_DEF);
+    Var *var = push_var(expect_ident(), TYPE_INT);
+    node->var = var;
+    expect(";");
+
     return node;
   }
 
@@ -471,7 +483,7 @@ Node *primary() {
       // 変数
       Var *var = find_lvar(tok);
       if (!var) {
-        var = push_var(strndup(tok->str, tok->len));
+        error_at(tok->str, "変数が定義されていません");
       }
       return new_var(var);
     }

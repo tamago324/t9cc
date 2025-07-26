@@ -104,6 +104,12 @@ void tokenize() {
       continue;
     }
 
+    if (is_keyward(p, "int")) {
+      cur = new_token(TK_INT, cur, p, 3);
+      p += 3;
+      continue;
+    }
+
     // 変数
     if (is_alnum(*p)) {
       cur = new_token(TK_IDENT, cur, p, 0);

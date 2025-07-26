@@ -8,6 +8,7 @@ typedef enum {
   TK_ELSE,     // else のトークン
   TK_WHILE,    // while のトークン
   TK_FOR,      // for のトークン
+  TK_INT,      // int のトークン
   TK_EOF,      // 入力の終わりを表すトークン
 } TokenKind;
 
@@ -43,13 +44,18 @@ typedef enum {
   ND_EXPR_STMT, // 式文
   ND_ADDR,      // アドレス取得 (&)
   ND_DEREF,     // アドレス参照 (*)
+  ND_VAR_DEF,   // 変数定義
 } NodeKind;
+
+// 変数の型
+typedef enum { TYPE_INT } VarType;
 
 // ローカル変数の型
 typedef struct Var Var;
 struct Var {
-  char *name; // 変数名
-  int offset; // RBP からのオフセット (これがスタック領域の割り当てと同等)
+  VarType type; // 型
+  char *name;   // 変数名
+  int offset;   // RBP からのオフセット (これがスタック領域の割り当てと同等)
 };
 
 // 変数のリスト (連結リストで表現)
@@ -83,7 +89,7 @@ struct Node {
   Node *args;     // 引数
   char *funcname; // return に対応する関数名
 
-  // 変数のための属性
+  // 変数、変数定義のための属性
   Var *var;
 
   // 関数定義の引数のための属性

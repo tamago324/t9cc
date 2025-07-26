@@ -61,16 +61,16 @@ assert 0 'main() {return 1>=2;}'
 
 # step9
 assert 3 'main() {1;2; return 3;}'
-assert 3 'main() {a=1;b=2; return a+b;}'
+assert 3 'main() {int a; a=1; int b;b=2; return a+b;}'
 
 # step10
-assert 3 'main() {abc=1;def=2; return abc+def;}'
-assert 6 'main() {a1 = 1;b2 = 2;c_3 = 3; return a1 + b2 + c_3;}'
+assert 3 'main() {int abc;abc=1; int def;def=2; return abc+def;}'
+assert 6 'main() {int a1; a1=1; int b2;b2=2; int c_3; c_3=3; return a1 + b2 + c_3;}'
 
 # step11;
 assert 3 'main() {return 3;}'
-assert 4 'main() {a=1; return a+3;}'
-assert 14 'main() {a = 3; b = 5 * 6 - 8; return a + b / 2;}'
+assert 4 'main() {int a;a=1; return a+3;}'
+assert 14 'main() {int a; a=3; int b; b=5*6-8; return a + b / 2;}'
 
 # step12
 assert 2 'main() {if (1==1) return 2;}'
@@ -85,14 +85,14 @@ assert 1 'main() {if (0) return 3; else return 1;}'
 assert 3 'main() {if (1) return 3; else return 1;}'
 
   # while
-assert 10 'main() {i=0; while(i<10) i=i+1; return i;}'
+assert 10 'main() {int i;i=0; while(i<10) i=i+1; return i;}'
 
   # for
-assert 55 'main() {i=0; j=0; for (i=0; i<=10; i=i+1) j=i+j; return j;}'
+assert 55 'main() {int i; int j;j=0; for (i=0; i<=10; i=i+1) j=i+j; return j;}'
 assert 3 'main() {for (;;) return 3; return 5;}'
 
 # step13
-assert 10 'main() {i=0; j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;}'
+assert 10 'main() {int i;i=0; int j;j=0; for (i=0; i<10; i=i+1) {j=j+1;} return j;}'
 assert 10 'main() {{return 10;}}'
 
 # step14
@@ -119,8 +119,8 @@ assert 5 'main(){return fib(5);} fib(n) { if (n <= 1) return n; return fib(n-1) 
 assert 8 'main(){return fib(6);} fib(n) { if (n <= 1) return n; return fib(n-1) + fib(n-2); }'
 
 # step16
-assert 3 'main() {x=3; y=&x; return *y;}'
-assert 9 'main() {x=3; y=&x; return 6 + *y;}'
+assert 3 'main() {int x;x=3; int y;y=&x; return *y;}'
+assert 9 'main() {int x;x=3; int y;y=&x; return 6 + *y;}'
 
 echo OK
 

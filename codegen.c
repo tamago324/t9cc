@@ -56,6 +56,10 @@ void gen(Node *node) {
 
   switch (node->kind) {
 
+  case ND_VAR_DEF:
+    // locals に追加するだけのため、特に何もしない
+    return;
+
   case ND_EXPR_STMT:
     gen(node->lhs);
     printf("  add rsp, 8\n"); // 式文は、結果 (スタックの先頭) を捨てる
@@ -267,6 +271,7 @@ void gen(Node *node) {
   case ND_EXPR_STMT:
   case ND_ADDR:
   case ND_DEREF:
+  case ND_VAR_DEF:
     break;
   }
 
