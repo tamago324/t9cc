@@ -8,8 +8,8 @@
 
 /**
   program    = function*
-  function   = ident "(" params? ")" "{" stmt* "}"
-  params     = ident ("," ident)*
+  function   = "int" ident "(" params? ")" "{" stmt* "}"
+  params     = "int" ident ("," "int" ident)*
   stmt       = expr ";"
              | "{" stmt* "}"
              | "if" "(" expr ")" stmt ("else" stmt)?
@@ -93,6 +93,18 @@ char *expect_ident() {
   return name;
 }
 
+// 現在のトークンが肩の場合、そのトークンを消費して、次に進む
+// それ以外の場合にはエラーを報告する
+VarType expect_type() {
+  if (token->kind != TK_INT)
+    error_at(token->str, "int ではありません");
+
+  token = token->next;
+
+  // 今はINTのみ
+  return TYPE_INT;
+}
+
 bool at_eof() { return token->kind == TK_EOF; }
 
 Node *new_node(NodeKind kind) {
@@ -162,11 +174,12 @@ Function *program() {
   return head.next;
 }
 
-// function   = ident "(" params? ")" "{" stmt* "}"
-// params     = ident ("," ident)*
+// function   = "int" ident "(" params? ")" "{" stmt* "}"
+// params     = "int" ident ("," "int" ident)*
 Function *function() {
   locals = NULL;
   Function *func = calloc(1, sizeof(Function));
+  func->return_type = expect_type();
   func->funcname = expect_ident();
   func->params = read_func_params();
 
@@ -194,7 +207,7 @@ Function *function() {
 }
 
 // ローカル変数として定義する (locals にも追加する)
-Var *push_var(char *name, VarType type) {
+Var *push_var(VarType type, char *name) {
   // 追加する変数
   Var *var = calloc(1, sizeof(Var));
   var->name = name;
@@ -221,13 +234,15 @@ VarList *read_func_params() {
   // 引数あり
   VarList head;
   head.next = calloc(1, sizeof(VarList));
-  head.next->var = push_var(expect_ident(), TYPE_INT);
+  VarType type = expect_type();
+  head.next->var = push_var(type, expect_ident());
 
   VarList *cur = head.next;
 
   while (consume(",")) {
     cur->next = calloc(1, sizeof(VarList));
-    cur->next->var = push_var(expect_ident(), TYPE_INT);
+    VarType type = expect_type();
+    cur->next->var = push_var(type, expect_ident());
     cur = cur->next;
   }
   expect(")");
@@ -311,7 +326,7 @@ Node *stmt() {
 
   if (consume_by_kind(TK_INT)) {
     node = new_node(ND_VAR_DEF);
-    Var *var = push_var(expect_ident(), TYPE_INT);
+    Var *var = push_var(TYPE_INT, expect_ident());
     node->var = var;
     expect(";");
 
