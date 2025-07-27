@@ -182,8 +182,17 @@ void gen(Node *node) {
     load();
     return;
   case ND_ASSIGN:
-    // 左辺の変数のアドレスを計算してスタックに積む
-    gen_addr(node->lhs);
+    // デリファレンス演算子が左辺になっている場合は、右辺値として処理する
+    if (node->lhs->kind == ND_DEREF) {
+      // 対象の変数に格納されているアドレスをロードする
+      // node->lhs      => *y
+      // node->lhs->lhs => y
+      gen(node->lhs->lhs);
+    } else {
+      // 通常の変数
+      //   左辺の変数のアドレスを計算してスタックに積む
+      gen_addr(node->lhs);
+    }
     // 右辺の式を評価して、スタックに積む
     gen(node->rhs);
     // 左辺の値を右辺の変数に代入する

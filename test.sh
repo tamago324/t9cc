@@ -122,6 +122,14 @@ assert 8 'int main(){return fib(6);} int fib(int n) { if (n <= 1) return n; retu
 assert 3 'int main() {int x;x=3; int y;y=&x; return *y;}'
 assert 9 'int main() {int x;x=3; int y;y=&x; return 6 + *y;}'
 
+# step18
+assert 3 'int main() {int x; int *y; x=1; y=&x; *y=3; return x;}';
+assert 3 'int main() {int x;x=3; return *&x; }'
+assert 3 'int main() {int x;x=3; int *y;y=&x; int **z;z=&y; return **z; }'
+
+assert 10 'int main() {int x; x=1; ptr(&x); return x;} int *ptr(int *a) { *a=10; }';
+
+
 echo OK
 
 

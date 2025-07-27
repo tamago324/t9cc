@@ -8,15 +8,15 @@
 
 /**
   program    = function*
-  function   = "int" ident "(" params? ")" "{" stmt* "}"
-  params     = "int" ident ("," "int" ident)*
+  function   = "int" ("*")* ident "(" params? ")" "{" stmt* "}"
+  params     = "int" ("*")* ident ("," "int" ("*")* ident)*
   stmt       = expr ";"
              | "{" stmt* "}"
              | "if" "(" expr ")" stmt ("else" stmt)?
              | "while" "(" expr ")" stmt
              | "for" "(" expr? ";" expr? ";" expr? ")" stmt
              | "return" expr ";"
-             | "int" ident ";"
+             | "int" ("*")* ident ";"
   expr       = assign
   assign	   = equality ("=" assign)?
   equality   = relational ("==" relational | "!=" relational)*
@@ -95,14 +95,25 @@ char *expect_ident() {
 
 // 現在のトークンが肩の場合、そのトークンを消費して、次に進む
 // それ以外の場合にはエラーを報告する
-VarType expect_type() {
+Type *expect_type() {
   if (token->kind != TK_INT)
     error_at(token->str, "int ではありません");
 
   token = token->next;
 
   // 今はINTのみ
-  return TYPE_INT;
+  Type *ty = calloc(1, sizeof(Type));
+  Type *ptr_to;
+  // ポインタ型定義
+  while (consume("*")) {
+    ty->ty = PTR;
+    ptr_to = calloc(1, sizeof(Type));
+    ty->ptr_to = ptr_to;
+    ty = ptr_to;
+  }
+  ty->ty = INT;
+
+  return ty;
 }
 
 bool at_eof() { return token->kind == TK_EOF; }
@@ -174,8 +185,8 @@ Function *program() {
   return head.next;
 }
 
-// function   = "int" ident "(" params? ")" "{" stmt* "}"
-// params     = "int" ident ("," "int" ident)*
+// function   = "int" ("*")* ident "(" params? ")" "{" stmt* "}"
+// params     = "int" ("*")* ident ("," "int" ("*")* ident)*
 Function *function() {
   locals = NULL;
   Function *func = calloc(1, sizeof(Function));
@@ -207,11 +218,11 @@ Function *function() {
 }
 
 // ローカル変数として定義する (locals にも追加する)
-Var *push_var(VarType type, char *name) {
+Var *push_var(Type *type, char *name) {
   // 追加する変数
   Var *var = calloc(1, sizeof(Var));
   var->name = name;
-  var->type = type;
+  var->ty = type;
 
   // ローカル変数のリストに追加する
   VarList *vl = calloc(1, sizeof(VarList));
@@ -234,14 +245,14 @@ VarList *read_func_params() {
   // 引数あり
   VarList head;
   head.next = calloc(1, sizeof(VarList));
-  VarType type = expect_type();
+  Type *type = expect_type();
   head.next->var = push_var(type, expect_ident());
 
   VarList *cur = head.next;
 
   while (consume(",")) {
     cur->next = calloc(1, sizeof(VarList));
-    VarType type = expect_type();
+    Type *type = expect_type();
     cur->next->var = push_var(type, expect_ident());
     cur = cur->next;
   }
@@ -326,7 +337,19 @@ Node *stmt() {
 
   if (consume_by_kind(TK_INT)) {
     node = new_node(ND_VAR_DEF);
-    Var *var = push_var(TYPE_INT, expect_ident());
+
+    Type *ty = calloc(1, sizeof(Type));
+    Type *ptr_to;
+    // ポインタ型定義
+    while (consume("*")) {
+      ty->ty = PTR;
+      ptr_to = calloc(1, sizeof(Type));
+      ty->ptr_to = ptr_to;
+      ty = ptr_to;
+    }
+    ty->ty = INT;
+
+    Var *var = push_var(ty, expect_ident());
     node->var = var;
     expect(";");
 

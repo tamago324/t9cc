@@ -48,14 +48,18 @@ typedef enum {
 } NodeKind;
 
 // 変数の型
-typedef enum { TYPE_INT } VarType;
+typedef struct Type Type;
+struct Type {
+  enum { INT, PTR } ty; // 型
+  struct Type *ptr_to;  // PTR の場合に何の型のポインタなのか？を示す
+};
 
 // ローカル変数の型
 typedef struct Var Var;
 struct Var {
-  VarType type; // 型
-  char *name;   // 変数名
-  int offset;   // RBP からのオフセット (これがスタック領域の割り当てと同等)
+  Type *ty;   // 型
+  char *name; // 変数名
+  int offset; // RBP からのオフセット (これがスタック領域の割り当てと同等)
 };
 
 // 変数のリスト (連結リストで表現)
@@ -100,12 +104,12 @@ struct Node {
 typedef struct Function Function;
 struct Function {
   Function *next;
-  VarType return_type; // 戻り値の型
-  char *funcname;      // 関数名
-  VarList *params;     // 引数のリスト
-  VarList *locals;     // 関数内のローカル変数
-  Node *body;          // ブロック内の文のリスト (連結リストで複数文を表現)
-  int stack_size;      // 関数のスタックのサイズ
+  Type *return_type; // 戻り値の型
+  char *funcname;    // 関数名
+  VarList *params;   // 引数のリスト
+  VarList *locals;   // 関数内のローカル変数
+  Node *body;        // ブロック内の文のリスト (連結リストで複数文を表現)
+  int stack_size;    // 関数のスタックのサイズ
 };
 
 // 入力プログラム (宣言)
